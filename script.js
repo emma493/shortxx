@@ -208,43 +208,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   }
 
-  // Caption + hashtags (optional Session-A fields, hidden when absent)
-  const captionBlock = document.querySelector(".caption-block");
-  const captionText = document.querySelector(".caption-text");
-  const captionMore = document.querySelector(".caption-more");
-  if (captionBlock && captionText) {
-    const cap = current && current.caption ? current.caption : "";
-    const tags = current && Array.isArray(current.hashtags) ? current.hashtags.filter(Boolean) : [];
-    captionText.innerHTML = "";
-    if (cap) captionText.appendChild(document.createTextNode(cap + " "));
-    tags.forEach((t) => {
-      const b = document.createElement("button");
-      b.type = "button";
-      b.textContent = "#" + t;
-      b.setAttribute("aria-label", "Search hashtag " + t);
-      b.style.cssText = "color:#b2e4ff;font-weight:600;background:none;border:none;padding:0;font:inherit;cursor:pointer;";
-      b.addEventListener("click", (ev) => {
-        ev.stopPropagation();
-        openDiscoverTag(t);
-      });
-      captionText.appendChild(b);
-      captionText.appendChild(document.createTextNode(" "));
-    });
-    captionBlock.style.display = cap || tags.length ? "" : "none";
-    if (captionMore) {
-      const syncMore = () => {
-        const expanded = !captionText.classList.contains("line-clamp-1");
-        captionMore.textContent = expanded ? "less" : "more";
-        captionMore.setAttribute("aria-expanded", String(expanded));
-      };
-      captionMore.addEventListener("click", (ev) => {
-        ev.stopPropagation();
-        captionText.classList.toggle("line-clamp-1");
-        syncMore();
-      });
-      syncMore();
-    }
-  }
+  // Captions/hashtags stay background-only (Discover search index): never rendered.
 
   if (likeCountEl) likeCountEl.textContent = formatCount(current ? current.likes : 0);
 
