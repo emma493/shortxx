@@ -1,30 +1,31 @@
-let deferredPrompt = null;
+/* Shortxx PWA bootstrap: registers the service worker and exposes a
+ * one-shot install prompter consumed by the install banner UI
+ * (pwa-banner.js). The native prompt is only ever fired from an explicit
+ * user tap on that banner — never automatically. */
+(function () {
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("/sw.js")
+        .then((reg) => console.log("Shortxx Service Worker registered successfully:", reg.scope))
+        .catch((err) => console.warn("Shortxx Service Worker registration failed:", err));
+    });
+  }
 
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js')
-      .then((reg) => console.log('Shortxx Service Worker registered successfully:', reg.scope))
-      .catch((err) => console.warn('Shortxx Service Worker registration failed:', err));
-  });
-}
-
-window.addEventListener('beforeinstallprompt', (e) => {
-  e.preventDefault();
-  deferredPrompt = e;
-
-  // Trigger installation on first user tap/click interaction
-  const triggerInstall = () => {
-    if (deferredPrompt) {
-      deferredPrompt.prompt();
-      deferredPrompt.userChoice.then((choiceResult) => {
-        if (choiceResult.outcome === 'accepted') {
-          console.log('User installed Shortxx to desktop/taskbar');
-        }
-        deferredPrompt = null;
-      });
-    }
-    window.removeEventListener('click', triggerInstall);
+  window.ShortxxPWA = {
+    canPrompt() {
+      return !!window.__deferredInstallPrompt;
+    },
+    async promptInstall() {
+      const d = window.__deferredInstallPrompt;
+      if (!d) return "unavailable";
+      window.__deferredInstallPrompt = null;
+      try {
+        d.prompt();
+        const choice = await d.userChoice;
+        return choice && choice.outcome === "accepted" ? "accepted" : "dismissed";
+      } catch (e) {
+        return "error";
+      }
+    },
   };
-
-  window.addEventListener('click', triggerInstall, { once: true });
-});
+})();

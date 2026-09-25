@@ -12,6 +12,7 @@ const SHELL = [
   "/tracking.js",
   "/app-mode.js",
   "/pwa-install.js",
+  "/pwa-banner.js",
   "/manifest.json",
   "/logo.png",
   "/icon.png",
