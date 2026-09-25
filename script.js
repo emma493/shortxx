@@ -1,4 +1,5 @@
-import { loadVideosFromFirestore, getNextVideo, getCurrentVideo, getAllVideos, jumpToIndex, persistLike, getComments, postComment, getFeedMode, setFeedMode, formatCount, USERNAMES } from "./vid.js";
+import { loadVideosFromFirestore, getNextVideo, getCurrentVideo, getAllVideos, jumpToIndex, persistLike, getComments, postComment, getFeedMode, setFeedMode, formatCount, USERNAMES, getFirebaseApp, loadUserProfile, saveUserProfile } from "./vid.js";
+import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, signInAnonymously, signOut } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
 
 // Tracks the hls.js instance currently attached to the player to prevent memory leaks
 let activeHls = null;
@@ -223,6 +224,197 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
   paintSave();
 
+  // --- 4b. Authentication (email, Google, anonymous guest) ---
+  const authOverlay = document.getElementById("auth-modal-overlay");
+  const authForm = document.getElementById("auth-form");
+  const authEmail = document.getElementById("auth-email");
+  const authPassword = document.getElementById("auth-password");
+  const loginBtn = document.getElementById("submit-login-btn");
+  const signupBtn = document.getElementById("submit-signup-btn");
+  const googleBtn = document.getElementById("google-auth-btn");
+  const quickBtn = document.getElementById("quick-login-btn");
+  let authUser = null;
+  let auth = null;
+  try {
+    auth = getAuth(getFirebaseApp());
+  } catch (e) {
+    console.warn("Auth init failed:", e);
+  }
+
+  function openAuth() {
+    if (authOverlay) authOverlay.classList.remove("hidden");
+  }
+  function closeAuth() {
+    if (authOverlay) authOverlay.classList.add("hidden");
+  }
+
+  function displayIdentity() {
+    if (authUser && !authUser.isAnonymous && (authUser.displayName || authUser.email)) {
+      return authUser.displayName || authUser.email.split("@")[0];
+    }
+    return getDeviceName();
+  }
+
+  function authErrorText(code) {
+    switch (code) {
+      case "auth/email-already-in-use": return "Email already registered — try Log In";
+      case "auth/invalid-credential":
+      case "auth/wrong-password":
+      case "auth/user-not-found": return "Wrong email or password";
+      case "auth/weak-password": return "Password needs at least 6 characters";
+      case "auth/invalid-email": return "That email address looks invalid";
+      case "auth/operation-not-allowed": return "Enable this sign-in method in Firebase console";
+      case "auth/unauthorized-domain": return "Add this domain under Firebase Auth settings";
+      case "auth/popup-blocked": return "Popup blocked — allow popups and retry";
+      case "auth/popup-closed-by-user": return "Google sign-in cancelled";
+      case "auth/network-request-failed": return "Network error — check connection";
+      default: return "Auth failed — try again";
+    }
+  }
+
+  function setBusy(b) {
+    [loginBtn, signupBtn, googleBtn, quickBtn].forEach((x) => {
+      if (x) x.disabled = b;
+    });
+  }
+
+  function pushProfileToCloud() {
+    if (!authUser || !authUser.uid) return;
+    saveUserProfile(authUser.uid, {
+      liked: Object.keys(likedMap),
+      saved: savedIds,
+      follows: follows,
+    });
+  }
+
+  async function syncProfileFromCloud() {
+    if (!authUser || !authUser.uid) return;
+    const cloud = await loadUserProfile(authUser.uid);
+    if (cloud) {
+      const cloudLiked = Array.isArray(cloud.liked) ? cloud.liked : [];
+      Object.keys(likedMap).forEach((id) => {
+        if (!cloudLiked.includes(id)) cloudLiked.push(id);
+      });
+      cloudLiked.forEach((id) => {
+        likedMap[id] = true;
+      });
+      const union = (a, b) => Array.from(new Set([...(a || []), ...(b || [])]));
+      const mergedSaved = union(savedIds, cloud.saved);
+      savedIds.length = 0;
+      mergedSaved.forEach((id) => savedIds.push(id));
+      const mergedFollows = union(follows, cloud.follows);
+      follows.length = 0;
+      mergedFollows.forEach((n) => follows.push(n));
+      localStorage.setItem("shortxx_liked", JSON.stringify(likedMap));
+      localStorage.setItem("shortxx_saved", JSON.stringify(savedIds));
+      localStorage.setItem("shortxx_follows", JSON.stringify(follows));
+      paintLike();
+      paintFollow();
+      paintSave();
+      if (likeCountEl) likeCountEl.textContent = formatCount(current ? current.likes : 0);
+    }
+    pushProfileToCloud();
+  }
+
+  function paintAuthButton() {
+    const label = document.querySelector("[data-login] [data-auth-label]");
+    const btn = document.querySelector("[data-login]");
+    if (!label || !btn) return;
+    if (authUser && !authUser.isAnonymous) {
+      label.textContent = "Log Out";
+      btn.setAttribute("aria-label", "Log out");
+    } else {
+      label.textContent = "Log In";
+      btn.setAttribute("aria-label", "Log in");
+    }
+  }
+
+  async function afterAuth(message) {
+    closeAuth();
+    if (authForm) authForm.reset();
+    await syncProfileFromCloud();
+    toast(message);
+  }
+
+  async function emailFlow(mode) {
+    if (!auth) {
+      toast("Auth unavailable — reload and retry");
+      return;
+    }
+    const email = (authEmail.value || "").trim();
+    const password = authPassword.value || "";
+    if (!email || !password) {
+      toast("Enter email and password");
+      return;
+    }
+    setBusy(true);
+    try {
+      if (mode === "signup") await createUserWithEmailAndPassword(auth, email, password);
+      else await signInWithEmailAndPassword(auth, email, password);
+      await afterAuth(mode === "signup" ? "Account created — welcome" : "Logged in — welcome back");
+    } catch (err) {
+      toast(authErrorText(err && err.code));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (authOverlay) {
+    const closeBtn = document.getElementById("close-auth-btn");
+    if (closeBtn) closeBtn.addEventListener("click", closeAuth);
+    authOverlay.addEventListener("click", (e) => {
+      if (e.target === authOverlay) closeAuth();
+    });
+  }
+  if (authForm) {
+    authForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      emailFlow("signup");
+    });
+  }
+  if (loginBtn) loginBtn.addEventListener("click", () => emailFlow("login"));
+  if (googleBtn) {
+    googleBtn.addEventListener("click", async () => {
+      if (!auth) {
+        toast("Auth unavailable — reload and retry");
+        return;
+      }
+      setBusy(true);
+      try {
+        await signInWithPopup(auth, new GoogleAuthProvider());
+        await afterAuth("Logged in with Google");
+      } catch (err) {
+        toast(authErrorText(err && err.code));
+      } finally {
+        setBusy(false);
+      }
+    });
+  }
+  if (quickBtn) {
+    quickBtn.addEventListener("click", async () => {
+      if (!auth) {
+        toast("Auth unavailable — reload and retry");
+        return;
+      }
+      setBusy(true);
+      try {
+        await signInAnonymously(auth);
+        await afterAuth("Guest session started");
+      } catch (err) {
+        toast(authErrorText(err && err.code));
+      } finally {
+        setBusy(false);
+      }
+    });
+  }
+  if (auth) {
+    onAuthStateChanged(auth, (user) => {
+      authUser = user;
+      paintAuthButton();
+      if (user) syncProfileFromCloud();
+    });
+  }
+
   // --- 5. Like (persisted to Firestore) ---
   let lastTap = 0;
 
@@ -236,6 +428,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (likeCountEl) likeCountEl.textContent = formatCount(current ? current.likes : 0);
     paintLike();
     persistLike(videoId, liked);
+    pushProfileToCloud();
   };
 
   const showBigHeart = (x, y) => {
@@ -279,6 +472,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
       localStorage.setItem("shortxx_follows", JSON.stringify(follows));
       paintFollow();
+      pushProfileToCloud();
     });
   }
 
@@ -296,6 +490,198 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
       localStorage.setItem("shortxx_saved", JSON.stringify(savedIds));
       paintSave();
+      pushProfileToCloud();
+
+  // --- 4b. Authentication (email, Google, anonymous guest) ---
+  const authOverlay = document.getElementById("auth-modal-overlay");
+  const authForm = document.getElementById("auth-form");
+  const authEmail = document.getElementById("auth-email");
+  const authPassword = document.getElementById("auth-password");
+  const loginBtn = document.getElementById("submit-login-btn");
+  const signupBtn = document.getElementById("submit-signup-btn");
+  const googleBtn = document.getElementById("google-auth-btn");
+  const quickBtn = document.getElementById("quick-login-btn");
+  let authUser = null;
+  let auth = null;
+  try {
+    auth = getAuth(getFirebaseApp());
+  } catch (e) {
+    console.warn("Auth init failed:", e);
+  }
+
+  function openAuth() {
+    if (authOverlay) authOverlay.classList.remove("hidden");
+  }
+  function closeAuth() {
+    if (authOverlay) authOverlay.classList.add("hidden");
+  }
+
+  function displayIdentity() {
+    if (authUser && !authUser.isAnonymous && (authUser.displayName || authUser.email)) {
+      return authUser.displayName || authUser.email.split("@")[0];
+    }
+    return getDeviceName();
+  }
+
+  function authErrorText(code) {
+    switch (code) {
+      case "auth/email-already-in-use": return "Email already registered — try Log In";
+      case "auth/invalid-credential":
+      case "auth/wrong-password":
+      case "auth/user-not-found": return "Wrong email or password";
+      case "auth/weak-password": return "Password needs at least 6 characters";
+      case "auth/invalid-email": return "That email address looks invalid";
+      case "auth/operation-not-allowed": return "Enable this sign-in method in Firebase console";
+      case "auth/unauthorized-domain": return "Add this domain under Firebase Auth settings";
+      case "auth/popup-blocked": return "Popup blocked — allow popups and retry";
+      case "auth/popup-closed-by-user": return "Google sign-in cancelled";
+      case "auth/network-request-failed": return "Network error — check connection";
+      default: return "Auth failed — try again";
+    }
+  }
+
+  function setBusy(b) {
+    [loginBtn, signupBtn, googleBtn, quickBtn].forEach((x) => {
+      if (x) x.disabled = b;
+    });
+  }
+
+  function pushProfileToCloud() {
+    if (!authUser || !authUser.uid) return;
+    saveUserProfile(authUser.uid, {
+      liked: Object.keys(likedMap),
+      saved: savedIds,
+      follows: follows,
+    });
+  }
+
+  async function syncProfileFromCloud() {
+    if (!authUser || !authUser.uid) return;
+    const cloud = await loadUserProfile(authUser.uid);
+    if (cloud) {
+      const cloudLiked = Array.isArray(cloud.liked) ? cloud.liked : [];
+      Object.keys(likedMap).forEach((id) => {
+        if (!cloudLiked.includes(id)) cloudLiked.push(id);
+      });
+      cloudLiked.forEach((id) => {
+        likedMap[id] = true;
+      });
+      const union = (a, b) => Array.from(new Set([...(a || []), ...(b || [])]));
+      const mergedSaved = union(savedIds, cloud.saved);
+      savedIds.length = 0;
+      mergedSaved.forEach((id) => savedIds.push(id));
+      const mergedFollows = union(follows, cloud.follows);
+      follows.length = 0;
+      mergedFollows.forEach((n) => follows.push(n));
+      localStorage.setItem("shortxx_liked", JSON.stringify(likedMap));
+      localStorage.setItem("shortxx_saved", JSON.stringify(savedIds));
+      localStorage.setItem("shortxx_follows", JSON.stringify(follows));
+      paintLike();
+      paintFollow();
+      paintSave();
+      if (likeCountEl) likeCountEl.textContent = formatCount(current ? current.likes : 0);
+    }
+    pushProfileToCloud();
+  }
+
+  function paintAuthButton() {
+    const label = document.querySelector("[data-login] [data-auth-label]");
+    const btn = document.querySelector("[data-login]");
+    if (!label || !btn) return;
+    if (authUser && !authUser.isAnonymous) {
+      label.textContent = "Log Out";
+      btn.setAttribute("aria-label", "Log out");
+    } else {
+      label.textContent = "Log In";
+      btn.setAttribute("aria-label", "Log in");
+    }
+  }
+
+  async function afterAuth(message) {
+    closeAuth();
+    if (authForm) authForm.reset();
+    await syncProfileFromCloud();
+    toast(message);
+  }
+
+  async function emailFlow(mode) {
+    if (!auth) {
+      toast("Auth unavailable — reload and retry");
+      return;
+    }
+    const email = (authEmail.value || "").trim();
+    const password = authPassword.value || "";
+    if (!email || !password) {
+      toast("Enter email and password");
+      return;
+    }
+    setBusy(true);
+    try {
+      if (mode === "signup") await createUserWithEmailAndPassword(auth, email, password);
+      else await signInWithEmailAndPassword(auth, email, password);
+      await afterAuth(mode === "signup" ? "Account created — welcome" : "Logged in — welcome back");
+    } catch (err) {
+      toast(authErrorText(err && err.code));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (authOverlay) {
+    const closeBtn = document.getElementById("close-auth-btn");
+    if (closeBtn) closeBtn.addEventListener("click", closeAuth);
+    authOverlay.addEventListener("click", (e) => {
+      if (e.target === authOverlay) closeAuth();
+    });
+  }
+  if (authForm) {
+    authForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      emailFlow("signup");
+    });
+  }
+  if (loginBtn) loginBtn.addEventListener("click", () => emailFlow("login"));
+  if (googleBtn) {
+    googleBtn.addEventListener("click", async () => {
+      if (!auth) {
+        toast("Auth unavailable — reload and retry");
+        return;
+      }
+      setBusy(true);
+      try {
+        await signInWithPopup(auth, new GoogleAuthProvider());
+        await afterAuth("Logged in with Google");
+      } catch (err) {
+        toast(authErrorText(err && err.code));
+      } finally {
+        setBusy(false);
+      }
+    });
+  }
+  if (quickBtn) {
+    quickBtn.addEventListener("click", async () => {
+      if (!auth) {
+        toast("Auth unavailable — reload and retry");
+        return;
+      }
+      setBusy(true);
+      try {
+        await signInAnonymously(auth);
+        await afterAuth("Guest session started");
+      } catch (err) {
+        toast(authErrorText(err && err.code));
+      } finally {
+        setBusy(false);
+      }
+    });
+  }
+  if (auth) {
+    onAuthStateChanged(auth, (user) => {
+      authUser = user;
+      paintAuthButton();
+      if (user) syncProfileFromCloud();
+    });
+  }
     });
   }
 
@@ -336,7 +722,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     wrap.querySelector("[data-form]").addEventListener("submit", async (e) => {
       e.preventDefault();
       const input = wrap.querySelector("[data-input]");
-      const id = await postComment(videoId, getDeviceName(), input.value);
+      const id = await postComment(videoId, displayIdentity(), input.value);
       if (id) {
         input.value = "";
         await refreshComments();
@@ -528,7 +914,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       '<div class="sx-sidebar-header">' +
       '<div class="sx-sidebar-title">Shortxx</div>' +
       '<div class="sx-sidebar-actions">' +
-      '<button class="sx-login-btn" data-login><i class="fas fa-sign-in-alt"></i>Log In</button>' +
+      '<button class="sx-login-btn" data-login><i class="fas fa-sign-in-alt"></i><span data-auth-label>Log In</span></button>' +
       '<button class="sx-close-btn" data-close aria-label="Close menu">✕</button>' +
       "</div></div>" +
       '<nav>' +
@@ -553,8 +939,19 @@ document.addEventListener("DOMContentLoaded", async () => {
     wrap.querySelectorAll("[data-close]").forEach((el) =>
       el.addEventListener("click", () => closeMenu()),
     );
-    wrap.querySelector("[data-login]").addEventListener("click", () => {
-      toast("Accounts coming soon");
+    wrap.querySelector('[data-login]').addEventListener("click", async () => {
+      if (authUser && !authUser.isAnonymous) {
+        closeMenu();
+        try {
+          await signOut(auth);
+          toast("Logged out");
+        } catch (e) {
+          toast("Log out failed");
+        }
+      } else {
+        closeMenu();
+        openAuth();
+      }
     });
     wrap.querySelectorAll("[data-dead]").forEach((el) =>
       el.addEventListener("click", (e) => e.preventDefault()),

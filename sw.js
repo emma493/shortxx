@@ -14,6 +14,7 @@ const SHELL = [
   "/pwa-install.js",
   "/pwa-banner.js",
   "/manifest.json",
+  "/auth-modal.css",
   "/logo.png",
   "/icon.png",
   "/gif.webp",

@@ -1,5 +1,5 @@
 import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
-import { getFirestore, collection, getDocs, query, where, doc, updateDoc, increment, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+import { getFirestore, collection, getDocs, query, where, doc, getDoc, setDoc, updateDoc, increment, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 
 // Firebase Configuration (project: shortxx-live)
 const firebaseConfig = {
@@ -17,6 +17,36 @@ const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0
 
 // Default Firestore database instance
 const db = getFirestore(app);
+
+/** Shared Firebase app instance (powers Firebase Auth in script.js). */
+export function getFirebaseApp() {
+  return app;
+}
+
+/**
+ * Per-user synced profile (rules allow public read/write on users/*).
+ * Stores liked ids, saved ids and followed creators so they follow the
+ * user across devices once signed in.
+ */
+export async function loadUserProfile(uid) {
+  if (!uid) return null;
+  try {
+    const snap = await getDoc(doc(db, "users", uid));
+    return snap.exists() ? snap.data() : null;
+  } catch (err) {
+    console.warn("Profile load failed:", err);
+    return null;
+  }
+}
+
+export async function saveUserProfile(uid, data) {
+  if (!uid) return;
+  try {
+    await setDoc(doc(db, "users", uid), data, { merge: true });
+  } catch (err) {
+    console.warn("Profile save failed:", err);
+  }
+}
 
 // Stable per-video creator pseudonyms (no Admin change needed).
 // Same video id always maps to the same name on every device.
