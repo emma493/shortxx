@@ -455,40 +455,80 @@ document.addEventListener("DOMContentLoaded", async () => {
   }));
 
   // --- 10. Menu drawer + feed switcher ---
-  let menuSheet = null;
-  function buildMenuSheet() {
-    if (menuSheet) return menuSheet;
+  // --- 10. Right sidebar drawer (slide-out navigation) ---
+  let sidebarSheet = null;
+  let sidebarDrawer = null;
+
+  function ensureSidebarCss() {
+    if (document.getElementById("sx-sidebar-css")) return;
+    const st = document.createElement("style");
+    st.id = "sx-sidebar-css";
+    st.textContent =
+      ".sx-sidebar-backdrop{position:fixed;inset:0;z-index:999;background:rgba(0,0,0,0.55);opacity:0;transition:opacity 0.3s ease;}" +
+      ".sx-sidebar-backdrop.active{opacity:1;}" +
+      ".sx-sidebar{position:fixed;top:0;right:0;width:280px;height:100vh;z-index:1000;background:#16171D;transform:translateX(100%);transition:transform 0.3s ease-in-out;display:flex;flex-direction:column;padding:20px 16px;height:100%;}" +
+      ".sx-sidebar.active{transform:translateX(0);}" +
+      ".sx-sidebar-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;}" +
+      ".sx-sidebar-title{font-size:20px;font-weight:900;color:#FFFFFF;}" +
+      ".sx-sidebar-actions{display:flex;align-items:center;gap:12px;}" +
+      ".sx-login-btn{background:#FF2B55;color:#FFFFFF;border-radius:20px;padding:8px 16px;font-weight:700;font-size:14px;display:flex;align-items:center;gap:6px;border:none;cursor:pointer;}" +
+      ".sx-close-btn{cursor:pointer;font-size:22px;color:#8A8B91;background:none;border:none;padding:0 2px;}" +
+      ".sidebar-link{display:flex;align-items:center;gap:14px;padding:12px 14px;margin-bottom:4px;border-radius:10px;color:#E1E2E6;text-decoration:none;font-size:15px;font-weight:600;font-family:inherit;transition:background 0.2s ease,color 0.2s ease;background:none;border:none;width:100%;text-align:left;cursor:pointer;}" +
+      ".sidebar-link i{font-size:18px;width:22px;text-align:center;color:#A1A2A7;}" +
+      ".sidebar-link:hover{background:rgba(255,255,255,0.08);color:#FFFFFF;}" +
+      ".sidebar-link.active-link i{color:#FF2B55;}" +
+      ".sx-div{border-bottom:1px solid rgba(255,255,255,0.08);margin:8px 0;}" +
+      ".sx-footer{margin-top:auto;padding-top:16px;border-top:1px solid rgba(255,255,255,0.08);}" +
+      ".sx-footer a{font-size:12px;color:#8A8B91;text-decoration:none;margin-right:12px;}" +
+      ".sx-footer .prefer{display:block;margin-top:6px;}";
+    document.head.appendChild(st);
+  }
+
+  function buildSidebar() {
+    if (sidebarSheet) return sidebarSheet;
+    ensureSidebarCss();
     const wrap = document.createElement("div");
-    wrap.style.cssText = "position:fixed;inset:0;z-index:90;display:none;";
-    const row = (label, hint) =>
-      '<div style="display:flex;align-items:center;justify-content:space-between;width:100%;color:#fff;font-size:15px;font-weight:600;padding:14px 4px;">' + label +
-      (hint ? '<span style="color:#8a8a8a;font-size:12px;">' + hint + "</span>" : "") + "</div>";
+    wrap.style.display = "none";
     wrap.innerHTML =
-      '<div data-close style="position:absolute;inset:0;background:rgba(0,0,0,0.6);"></div>' +
-      '<div role="dialog" aria-label="Menu" style="position:absolute;top:0;bottom:0;left:0;width:min(320px,85vw);background:#121212;border-right:1px solid #2f2f2f;padding:calc(16px + env(safe-area-inset-top,0px)) 16px 16px;overflow-y:auto;">' +
-      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">' +
-      '<div style="color:#fff;font-size:17px;font-weight:800;">Shortxx</div>' +
-      '<button data-close aria-label="Close menu" style="color:#8a8a8a;font-size:20px;padding:4px 8px;">✕</button></div>' +
-      '<button data-go="home" style="width:100%;text-align:left;background:none;border:none;">' + row("🏠 Home") + "</button>" +
-      '<button data-go="discover" style="width:100%;text-align:left;background:none;border:none;">' + row("🔍 Discover") + "</button>" +
-      '<button data-go="following" style="width:100%;text-align:left;background:none;border:none;">' + row("👥 Following feed") + "</button>" +
-      '<button data-go="top" style="width:100%;text-align:left;background:none;border:none;">' + row("🔥 Top videos") + "</button>" +
-      '<button data-go="saved" style="width:100%;text-align:left;background:none;border:none;">' + row("🔖 Saved videos") + "</button>" +
-      '<div style="height:1px;background:#2f2f2f;margin:8px 0;"></div>' +
-      '<a href="https://shrinkme.click/doodstreams" target="_blank" rel="noopener" style="display:block;text-decoration:none;">' + row("Live Cams") + "</a>" +
-      "</div>";
+      '<div class="sx-sidebar-backdrop" data-close></div>' +
+      '<aside class="sx-sidebar" aria-label="Site navigation">' +
+      '<div class="sx-sidebar-header">' +
+      '<div class="sx-sidebar-title">Shortxx</div>' +
+      '<div class="sx-sidebar-actions">' +
+      '<button class="sx-login-btn" data-login><i class="fas fa-sign-in-alt"></i>Log In</button>' +
+      '<button class="sx-close-btn" data-close aria-label="Close menu">✕</button>' +
+      "</div></div>" +
+      '<nav>' +
+      '<button class="sidebar-link active-link" data-go="home"><i class="fas fa-home"></i><span>Home</span></button>' +
+      '<button class="sidebar-link" data-go="discover"><i class="fas fa-compass"></i><span>Discover</span></button>' +
+      '<button class="sidebar-link" data-go="following"><i class="fas fa-user-check"></i><span>Following feed</span></button>' +
+      '<button class="sidebar-link" data-go="top"><i class="fas fa-fire"></i><span>Top videos</span></button>' +
+      '<button class="sidebar-link" data-go="saved"><i class="fas fa-bookmark"></i><span>Saved Videos</span></button>' +
+      "</nav>" +
+      '<div class="sx-div"></div>' +
+      '<nav>' +
+      '<a class="sidebar-link" href="https://shrinkme.click/doodstreams" target="_blank" rel="noopener"><i class="fas fa-video"></i><span>Live Cams</span></a>' +
+      "</nav>" +
+      '<div class="sx-footer">' +
+      '<div><a href="#" data-dead>Terms of Service</a><a href="#" data-dead>Privacy Policy</a></div>' +
+      '<a href="#" data-dead class="prefer">Prefer us on Google</a>' +
+      "</div></aside>";
     document.body.appendChild(wrap);
-    menuSheet = wrap;
+    sidebarSheet = wrap;
+    sidebarDrawer = wrap.querySelector(".sx-sidebar");
     wrap.querySelectorAll("[data-close]").forEach((el) =>
-      el.addEventListener("click", () => {
-        wrap.style.display = "none";
-        if (menuBtn) menuBtn.setAttribute("aria-expanded", "false");
-      }),
+      el.addEventListener("click", () => closeMenu()),
+    );
+    wrap.querySelector("[data-login]").addEventListener("click", () => {
+      toast("Accounts coming soon");
+    });
+    wrap.querySelectorAll("[data-dead]").forEach((el) =>
+      el.addEventListener("click", (e) => e.preventDefault()),
     );
     wrap.querySelectorAll("[data-go]").forEach((el) =>
       el.addEventListener("click", () => {
         const go = el.getAttribute("data-go");
-        wrap.style.display = "none";
+        closeMenu();
         if (go === "home") location.href = "./index.html";
         else if (go === "discover") openDiscover("all");
         else if (go === "saved") openDiscover("saved");
@@ -499,16 +539,31 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   function openMenu() {
-    buildMenuSheet().style.display = "";
+    const wrap = buildSidebar();
+    wrap.style.display = "";
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        wrap.querySelector(".sx-sidebar-backdrop").classList.add("active");
+        sidebarDrawer.classList.add("active");
+      });
+    });
     if (menuBtn) menuBtn.setAttribute("aria-expanded", "true");
+  }
+
+  function closeMenu() {
+    if (!sidebarSheet || sidebarSheet.style.display === "none") return;
+    sidebarSheet.querySelector(".sx-sidebar-backdrop").classList.remove("active");
+    if (sidebarDrawer) sidebarDrawer.classList.remove("active");
+    if (menuBtn) menuBtn.setAttribute("aria-expanded", "false");
+    setTimeout(() => {
+      if (sidebarSheet) sidebarSheet.style.display = "none";
+    }, 300);
   }
 
   if (menuBtn) menuBtn.addEventListener("click", (e) => {
     e.stopPropagation();
-    if (menuSheet && menuSheet.style.display !== "none") {
-      menuSheet.style.display = "none";
-      menuBtn.setAttribute("aria-expanded", "false");
-    } else openMenu();
+    if (sidebarSheet && sidebarSheet.style.display !== "none") closeMenu();
+    else openMenu();
   });
   if (moreBtn) moreBtn.addEventListener("click", (e) => {
     e.stopPropagation();
