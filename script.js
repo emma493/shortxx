@@ -454,7 +454,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     openDiscover("all");
   }));
 
-  // --- 10. Menu drawer + feed switcher ---
   // --- 10. Right sidebar drawer (slide-out navigation) ---
   let sidebarSheet = null;
   let sidebarDrawer = null;
@@ -482,9 +481,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       ".sx-div{border-bottom:1px solid rgba(255,255,255,0.08);margin:8px 0;}" +
       ".sx-footer{margin-top:auto;padding-top:16px;border-top:1px solid rgba(255,255,255,0.08);}" +
       ".sx-footer a{font-size:12px;color:#8A8B91;text-decoration:none;margin-right:12px;}" +
-      ".sx-footer .prefer{display:block;margin-top:6px;}" +
-      ".sx-live-ic{position:relative;display:inline-flex;width:22px;justify-content:center;}" +
-      ".sx-live-dot{position:absolute;top:-3px;right:0;width:9px;height:9px;border-radius:50%;background:#FF2B55;box-shadow:0 0 6px rgba(255,43,85,0.9);}";
+      ".sx-footer .prefer{display:block;margin-top:6px;}";
     document.head.appendChild(st);
   }
 
@@ -511,7 +508,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       "</nav>" +
       '<div class="sx-div"></div>' +
       '<nav>' +
-      '<a class="sidebar-link" href="https://go.whitetrafsa.com?userId=dd571e000ae6f07ef31fa3fb50db3d7353ab3ba1c6c501e61a894d69b80e96ae" target="_blank" rel="noopener"><span class="sx-live-ic"><i class="fas fa-video"></i><span class="sx-live-dot"></span></span><span>Live Cams</span></a>' +
+      '<a class="sidebar-link" href="https://go.whitetrafsa.com?userId=dd571e000ae6f07ef31fa3fb50db3d7353ab3ba1c6c501e61a894d69b80e96ae" target="_blank" rel="noopener"><i class="fas fa-video"></i><span>Live Cams</span></a>' +
       "</nav>" +
       '<div class="sx-footer">' +
       '<div><a href="#" data-dead>Terms of Service</a><a href="#" data-dead>Privacy Policy</a></div>' +
