@@ -162,10 +162,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (userNameElement) userNameElement.textContent = creator;
 
   if (likeCountEl) likeCountEl.textContent = formatCount(current ? current.likes : 0);
-  const viewsElement = document.querySelector(".views-count");
-  if (viewsElement) viewsElement.textContent = "· " + formatCount(current ? current.views : 0) + " views";
-  const watchingElement = document.querySelector(".watching-num");
-  if (watchingElement) watchingElement.textContent = String(Math.floor(Math.random() * 45) + 12);
 
   const likedMap = readJson("shortxx_liked", {});
   const savedIds = readJson("shortxx_saved", []);
