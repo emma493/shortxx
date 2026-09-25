@@ -106,6 +106,26 @@ function getDeviceName() {
 }
 
 document.addEventListener("DOMContentLoaded", async () => {
+  // --- 0. PWA shortcut deep links (?feed=foryou|trending|saved|live) ---
+  let pendingSavedOverlay = false;
+  const deepFeed = new URLSearchParams(location.search).get("feed");
+  if (deepFeed === "foryou" || deepFeed === "trending") {
+    // Apply engine feed mode, then reload once with the param stripped.
+    setFeedMode(deepFeed === "trending" ? "top" : "foryou");
+    const u = new URL(location.href);
+    u.searchParams.delete("feed");
+    location.href = u.toString();
+    return;
+  }
+  if (deepFeed === "live") {
+    location.href = "https://go.whitetrafsa.com?userId=dd571e000ae6f07ef31fa3fb50db3d7353ab3ba1c6c501e61a894d69b80e96ae";
+    return;
+  }
+  if (deepFeed === "saved") {
+    pendingSavedOverlay = true;
+    history.replaceState(null, "", location.pathname);
+  }
+
   // --- 1. Firestore Video Fetching & Preload ---
   await loadVideosFromFirestore();
 
@@ -842,4 +862,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       seeking = false;
     });
   }
+
+  // --- 18. PWA Saved shortcut lands straight in Saved Discover ---
+  if (pendingSavedOverlay) openDiscover("saved");
 });
