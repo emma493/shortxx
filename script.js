@@ -758,8 +758,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       await refreshComments();
     });
   }
-  // Paint rail comment count on load (sheet stays hidden).
-  refreshComments();
+  // Rail comment count paints lazily on first drawer open (no extra
+  // Firestore read on page load).
 
   // --- 9. Discover overlay (grid + search + filters) ---
   let discoverSheet = null;
@@ -816,7 +816,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         cell.setAttribute("aria-label", "Play video by @" + v.creator);
         const thumb = v.posterUrl
           ? '<img src="' + esc(v.posterUrl) + '" alt="" loading="lazy" style="width:100%;height:100%;object-fit:cover;" />'
-          : '<video src="' + esc(v.url) + '" muted playsinline preload="metadata" style="width:100%;height:100%;object-fit:cover;"></video>';
+          : '<div style="width:100%;height:100%;background:linear-gradient(135deg,#1e1e1e,#121212);display:flex;align-items:center;justify-content:center;color:#fe2c55;font-size:28px;">▶</div>';
         cell.innerHTML =
           thumb +
           '<span style="position:absolute;left:0;right:0;bottom:0;padding:14px 6px 6px;background:linear-gradient(transparent,rgba(0,0,0,0.8));color:#fff;font-size:11px;font-weight:700;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">@' + esc(v.creator) + " · " + esc(formatCount(v.views)) + "</span>";
