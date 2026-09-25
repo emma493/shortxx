@@ -1,0 +1,21 @@
+{
+  "short_name": "ShortXX",
+  "name": "ShortXX Live - Premium Entertainment",
+  "icons": [
+    {
+      "src": "favicon.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "favicon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "start_url": "index.html",
+  "background_color": "#0F101F",
+  "theme-color": "#0F101F",
+  "display": "standalone",
+  "orientation": "portrait"
+}

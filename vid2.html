@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-2YGPQ8QW0P"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-2YGPQ8QW0P');
+</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Shortxx - Endless Short Videos & Clips</title>
+    
+    <link rel="image_src" href="https://shortxx.live/preview.png" />
+    <meta name="description" content="Shortxx delivers viral trending videos optimized for your phone/tablet. Simply swipe to discover an endless stream of fresh entertainment." />
+    <meta name="keywords" content="videos, trending, clips, entertainment, viral, short clips, mobile, app, quick videos, shortxx, shortxx.live, shortx, video, swipe videos, content stream, mobile entertainment" />
+    <meta name="rating" content="general" />
+    <meta name="theme-color" content="#0F101F" />
+    
+    <link rel="icon" href="icon.png" sizes="32x32" />
+    <link rel="icon" href="icon.png" type="image/svg+xml" />
+    <link rel="apple-touch-icon" sizes="180x180" href="icon.png" />
+    <link rel="shortcut icon" href="icon.png" type="image/x-icon">
+    <link rel="manifest" href="manifest.json?v=8" />
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:title" content="Shortxx" />
+    <meta property="og:description" content="Shortxx delivers viral trending videos optimized for your phone/tablet." />
+    <meta property="og:url" content="https://shortxx.live/" />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="https://shortxx.live/preview.png" />
+    <meta property="og:image:secure_url" content="https://shortxx.live/preview.png" />
+    <meta property="og:image:alt" content="Shortxx Image Alt" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:site_name" content="Shortxx" />
+    
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:url" content="https://shortxx.live/" />
+    <meta name="twitter:title" content="Shortxx" />
+    <meta name="twitter:description" content="Shortxx delivers viral trending videos optimized for your phone/tablet." />
+    <meta name="twitter:image" content="https://shortxx.live/preview.png" />
+    <meta name="twitter:creator" content="@shortxx" />
+    
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+    <!-- Scripts -->
+    <script src="app-mode.js"></script>
+    <script src="vid.js"></script>
+</head>
+
+<body data-page="vid2" data-next="index.html" data-prev="index.html">
+
+    <div class="top-nav">
+        <a href="https://shrinkme.click/doodstreams" target="_blank"> <img src="logo.png" alt="Logo" class="logo">
+        </a>
+
+      <a href="https://shrinkme.click/doodstreams" target="_blank">
+    <div class="live-badge">
+        <svg class="live-radar-icon" viewBox="0 0 26 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <!-- Inner Radar Waves -->
+            <path class="radar-wave wave-1" d="M 9,6 A 6,6 0 0,0 9,14" stroke="white" stroke-width="2" stroke-linecap="round"/>
+            <path class="radar-wave wave-1" d="M 17,6 A 6,6 0 0,1 17,14" stroke="white" stroke-width="2" stroke-linecap="round"/>
+            
+            <!-- Outer Radar Waves -->
+            <path class="radar-wave wave-2" d="M 6,3 A 10,10 0 0,0 6,17" stroke="white" stroke-width="2" stroke-linecap="round"/>
+            <path class="radar-wave wave-2" d="M 20,3 A 10,10 0 0,1 20,17" stroke="white" stroke-width="2" stroke-linecap="round"/>
+            
+            <!-- Center Blinking Dot -->
+            <circle class="radar-dot" cx="13" cy="10" r="2.2" fill="white"/>
+        </svg>
+        <span>LIVE</span>
+    </div>
+</a>
+    </div>
+
+   <div class="video-container">
+    <div class="loader"></div>
+
+    <video id="main-video" loop playsinline muted disableremoteplayback x-webkit-airplay="deny"></video>
+        <div class="video-player-controls">
+            <div class="progress-wrapper">
+                <input type="range" class="video-progress-bar" value="0" min="0" step="0.01">
+                <div class="progress-fill"></div>
+            </div>
+        </div>
+
+        <div class="side-bar">
+            <a href="https://shrinkme.click/doodstreams" target="_blank">
+                <div class="profile-wrapper">
+                    <!-- The LIVE badge -->
+                    <div class="font-bold text-center rounded select-none bg-brand" id="live">
+                        LIVE
+                    </div>
+            </a>
+
+            <!-- The Profile Circle -->
+            <a href="https://shrinkme.click/doodstreams" target="_blank">
+                <div class="profile-container">
+                    <img src="gif.webp" class="profile-gif" alt="Profile">
+                    <div class="ripple"></div>
+                </div>
+            </a>
+        </div>
+
+
+        <div class="action-btn like-btn"><i class="fas fa-heart"></i> <span class="like-count">0</span></div>
+        <div class="action-btn mute-btn"><i class="fas fa-volume-mute"></i></div>
+
+
+       
+        <div class="action-btn download-btn"><i class="fas fa-download"></i></div>
+    </div>
+
+    <a href="https://shrinkme.click/doodstreams" target="_blank">
+        <div class="bottom-info">
+            <div class="user-name"><span class="dynamic-username">User</span> <i
+                    class="fas fa-check-circle verified"></i></div>
+
+        </div>
+    </a>
+    </div>
+
+    <style>
+        :root {
+            --brand-pink: #ff2b54;
+        }
+
+        .profile-wrapper {
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            /* Increased container size slightly to accommodate the expanding ripple */
+            width: 80px;
+            height: 80px;
+        }
+
+        .profile-container {
+            position: relative;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            border: 2px solid var(--brand-pink);
+            z-index: 2;
+            background: #000;
+            /* REMOVED overflow: hidden so the ripple can be seen outside the circle */
+        }
+
+        .profile-gif {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            object-fit: cover;
+            /* Apply clip-path or ensure the image itself is rounded to prevent corners peaking out */
+            display: block;
+        }
+
+        #live {
+            position: absolute;
+            top: 7px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: var(--brand-pink);
+            color: white;
+            font-weight: 800;
+            font-size: 7px;
+            padding: 1px 4px;
+            border-radius: 2px;
+            border-top-left-radius: 8px;
+            border-top-right-radius: 8px;
+            z-index: 10;
+            text-align: center;
+            letter-spacing: 0.2px;
+            white-space: nowrap;
+            text-transform: uppercase;
+        }
+
+        /* --- Optimized Pink Ripple --- */
+        .ripple {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            /* Start at the same size as the profile container */
+            width: 50px;
+            height: 50px;
+            border: 8px solid var(--brand-pink);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            animation: ripple-out 1.5s infinite ease-out;
+            z-index: 1;
+            /* Sits behind the profile-container */
+            pointer-events: none;
+        }
+
+        @keyframes ripple-out {
+            0% {
+                width: 50px;
+                height: 50px;
+                opacity: 0.8;
+            }
+
+            100% {
+                /* Adjust these values to make the ripple larger or smaller */
+                width: 75px;
+                height: 75px;
+                opacity: 0;
+            }
+        }
+
+        .ads {
+            position: fixed;
+            margin-top: 2000px;
+        }
+    </style>
+    <div class="ads">
+        <span>
+            <script async="async" data-cfasync="false"
+                src="https://pl29463653.effectivecpmnetwork.com/f3658f5fc3718ee6079a518de57e2f26/invoke.js"></script>
+            <div id="container-f3658f5fc3718ee6079a518de57e2f26"></div>
+
+        </span>
+        <span>
+            <script>
+                atOptions = {
+                    'key': 'f93fe805b73acf8c6ba7df9ab95113f5',
+                    'format': 'iframe',
+                    'height': 60,
+                    'width': 468,
+                    'params': {}
+                };
+            </script>
+            <script src="https://www.highperformanceformat.com/f93fe805b73acf8c6ba7df9ab95113f5/invoke.js"></script>
+
+        </span>
+        <span>
+            <script>
+                atOptions = {
+                    'key': '9ab6a73eb00be0e04df843b680144810',
+                    'format': 'iframe',
+                    'height': 250,
+                    'width': 300,
+                    'params': {}
+                };
+            </script>
+            <script src="https://www.highperformanceformat.com/9ab6a73eb00be0e04df843b680144810/invoke.js"></script>
+
+        </span>
+        <span>
+            <script>
+                atOptions = {
+                    'key': 'da75c4b22b3795b81c34aca689d781b6',
+                    'format': 'iframe',
+                    'height': 600,
+                    'width': 160,
+                    'params': {}
+                };
+            </script>
+            <script src="https://www.highperformanceformat.com/da75c4b22b3795b81c34aca689d781b6/invoke.js"></script>
+
+        </span>
+        <span>
+            <script>
+                atOptions = {
+                    'key': '048ce66ab4ca14af8d4cba011c9ae7c0',
+                    'format': 'iframe',
+                    'height': 300,
+                    'width': 160,
+                    'params': {}
+                };
+            </script>
+            <script src="https://www.highperformanceformat.com/048ce66ab4ca14af8d4cba011c9ae7c0/invoke.js"></script>
+
+        </span>
+        <span>
+            <script>
+                atOptions = {
+                    'key': 'a8930e29d76fd8b4000c34b30b335f09',
+                    'format': 'iframe',
+                    'height': 50,
+                    'width': 320,
+                    'params': {}
+                };
+            </script>
+            <script src="https://www.highperformanceformat.com/a8930e29d76fd8b4000c34b30b335f09/invoke.js"></script>
+
+        </span>
+        <span>
+            <script>
+                atOptions = {
+                    'key': 'fcf06b4e288fb9c5106b6fc6d118adab',
+                    'format': 'iframe',
+                    'height': 90,
+                    'width': 728,
+                    'params': {}
+                };
+            </script>
+            <script src="https://www.highperformanceformat.com/fcf06b4e288fb9c5106b6fc6d118adab/invoke.js"></script>
+
+        </span>
+    </div>
+
+  <!-- Notification Opt-In Bottom Banner Card -->
+  <div id="notify-banner" class="notify-banner-card" role="dialog" aria-label="Turn on notifications">
+      <button class="notify-banner-close" id="notify-banner-close" aria-label="Dismiss">&times;</button>
+      <div class="notify-banner-row">
+          <div class="notify-bell-badge"><i class="fas fa-bell"></i></div>
+          <div class="notify-banner-texts">
+              <p class="notify-banner-title">Never miss the hottest new clips</p>
+              <p class="notify-banner-subtitle">One tap - turn off anytime</p>
+          </div>
+      </div>
+      <button class="notify-banner-cta" id="notify-banner-cta">Turn on notifications</button>
+  </div>
+
+  <!-- JavaScript scripts remain at the very bottom -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hls.js/1.5.17/hls.min.js"></script>
+  <script type="module" src="script.js"></script>
+  <script src="auto-resume.js"></script>
+  <script src="tracking.js"></script>
+  <script>
+  (function() {
+    // 1. Force all dynamic links/popups created by ad scripts to target a new tab
+    const originalOpen = window.open;
+    window.open = function(url, name, specs) {
+      // Force opening in a new tab/window regardless of how the ad script calls it
+      return originalOpen.call(window, url, '_blank', specs);
+    };
+
+    // 2. Prevent third-party scripts from overriding the main site's window.location directly
+    let currentHref = window.location.href;
+    
+    // Intercept attempts to assign window.location directly (e.g. window.location = "http://...")
+    try {
+      Object.defineProperty(window, 'onbeforeunload', {
+        configurable: true,
+        get: function() { return null; },
+        set: function(fn) {
+          // Captures unload handlers set by ad networks trying to trap users on redirect
+        }
+      });
+    } catch (e) {}
+
+    // 3. Convert programmatic location redirects into new-tab popups
+    const handleNavigationAttempt = function(targetUrl) {
+      if (targetUrl && targetUrl !== currentHref && !targetUrl.startsWith(window.location.origin)) {
+        window.open(targetUrl, '_blank');
+        return true; // Navigation intercepted
+      }
+      return false;
+    };
+
+    // Proxy location setter if browser environment supports it
+    try {
+      const locationDescriptor = Object.getOwnPropertyDescriptor(window, 'location');
+      if (locationDescriptor && locationDescriptor.configurable) {
+        let realLocation = window.location;
+        Object.defineProperty(window, 'location', {
+          get: function() { return realLocation; },
+          set: function(val) {
+            if (!handleNavigationAttempt(val)) {
+              realLocation.href = val;
+            }
+          }
+        });
+      }
+    } catch (e) {
+      // Fallback if location property is strictly locked by the browser engine
+    }
+  })();
+</script>
+
+<!-- Your Adsterra Social Bar Script -->
+<script src="https://pl29463657.profitableratecpmnetwork.com/39/33/21/3933219bf118f1e00ad2e662fb1558d8.js"></script>
+</body>
+</html>
