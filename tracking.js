@@ -74,10 +74,12 @@ async function recordView(videoId) {
   });
 
   // Log granular video_view event for the 24H analytics filter
+  // userId bridges to the signed-in identity when script.js has set one.
   eventsRef.add({
     event_type: "video_view",
     video_id: videoId,
-    userId: "ANONYMOUS",
+    userId: window.shortxxIdentity || "ANONYMOUS",
+    user_agent: navigator.userAgent || "",
     device_type: detectDeviceType(),
     country: "GH",
     referrer: document.referrer || "Direct",
