@@ -1,0 +1,15 @@
+/* css/features/discover.css — extracted from inline styles in old script.js discover sheet. */
+.sx-discover { position: fixed; inset: 0; z-index: 90; display: none; background: #000; }
+.sx-discover-inner { max-width: 480px; margin: 0 auto; height: 100%; display: flex; flex-direction: column; }
+.sx-discover-bar { display: flex; align-items: center; gap: 8px; padding: calc(12px + env(safe-area-inset-top, 0px)) 12px 12px; }
+.sx-discover-x { color: #fff; font-size: 20px; padding: 4px 8px; background: none; border: none; cursor: pointer; }
+.sx-discover-q { flex: 1; background: #1e1e1e; border: 1px solid #2f2f2f; color: #fff; font-size: 14px; border-radius: 999px; padding: 10px 14px; outline: none; }
+.sx-discover-chips { display: flex; gap: 8px; padding: 0 12px 12px; flex-wrap: wrap; }
+.sx-chip { font-size: 13px; font-weight: 700; border-radius: 999px; padding: 8px 16px; background: #1e1e1e; color: #a0a0a0; border: none; cursor: pointer; }
+.sx-chip-on { background: #fe2c55; color: #fff; }
+.sx-discover-grid { flex: 1; overflow-y: auto; display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; padding: 0 2px calc(12px + env(safe-area-inset-bottom, 0px)); align-content: start; }
+.sx-tile { position: relative; aspect-ratio: 3/4; background: #121212; overflow: hidden; border: none; padding: 0; cursor: pointer; }
+.sx-tile-img { width: 100%; height: 100%; object-fit: cover; }
+.sx-tile-fallback { width: 100%; height: 100%; background: linear-gradient(135deg, #1e1e1e, #121212); display: flex; align-items: center; justify-content: center; color: #fe2c55; font-size: 28px; }
+.sx-tile-cap { position: absolute; left: 0; right: 0; bottom: 0; padding: 14px 6px 6px; background: linear-gradient(transparent, rgba(0,0,0,0.8)); color: #fff; font-size: 11px; font-weight: 700; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sx-discover-empty { grid-column: 1/-1; color: #8a8a8a; font-size: 14px; text-align: center; padding: 32px 0; }

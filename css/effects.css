@@ -1,0 +1,16 @@
+/* css/effects.css — keyframes moved out of index.html inline <style>. */
+@keyframes livecam-glow {
+  0%, 100% { transform: scale(1); filter: drop-shadow(0 0 2px rgba(255, 43, 85, 0.55)); }
+  50% { transform: scale(1.22); filter: drop-shadow(0 0 9px rgba(255, 43, 85, 1)); }
+}
+.livecam-glow { animation: livecam-glow 1.6s ease-in-out infinite; }
+.sx-big-heart {
+  position: fixed;
+  transform: translate(-50%, -50%) scale(0);
+  opacity: 0;
+  z-index: 80;
+  pointer-events: none;
+  transition: transform 0.25s ease-out, opacity 0.4s ease-out;
+}
+.sx-big-heart-show { transform: translate(-50%, -50%) scale(1.2); opacity: 1; }
+.sx-big-heart-fade { transform: translate(-50%, -50%) scale(1); opacity: 0; }

@@ -1,0 +1,16 @@
+/* css/features/comments.css — extracted from inline styles in old script.js comments drawer. */
+.sx-comments { position: fixed; inset: 0; z-index: 90; display: none; }
+.sx-comments-backdrop { position: absolute; inset: 0; background: rgba(0,0,0,0.6); }
+.sx-comments-card { position: absolute; left: 0; right: 0; bottom: 0; max-width: 480px; margin: 0 auto; background: #121212; border-top: 1px solid #2f2f2f; border-radius: 16px 16px 0 0; max-height: 75vh; display: flex; flex-direction: column; }
+.sx-comments-head { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; border-bottom: 1px solid #2f2f2f; color: #fff; font-size: 15px; font-weight: 700; }
+.sx-comments-x { color: #8a8a8a; font-size: 20px; line-height: 1; padding: 4px 8px; background: none; border: none; cursor: pointer; }
+.sx-comments-list { overflow-y: auto; padding: 12px 16px; flex: 1; min-height: 120px; }
+.sx-comments-form { display: flex; gap: 8px; padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid #2f2f2f; }
+.sx-comments-input { flex: 1; background: #1e1e1e; border: 1px solid #2f2f2f; color: #fff; font-size: 14px; border-radius: 999px; padding: 10px 14px; outline: none; }
+.sx-comments-post { background: #fe2c55; color: #fff; font-size: 14px; font-weight: 700; border-radius: 999px; padding: 10px 18px; border: none; cursor: pointer; }
+.sx-comment-row { display: flex; gap: 10px; padding: 10px 0; border-bottom: 1px solid #1e1e1e; }
+.sx-comment-avatar { flex: none; width: 32px; height: 32px; border-radius: 50%; background: #2a2a2a; color: #fff; font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+.sx-comment-body { min-width: 0; }
+.sx-comment-name { color: #fff; font-size: 13px; font-weight: 700; }
+.sx-comment-text { color: #e8e8e8; font-size: 14px; line-height: 20px; overflow-wrap: anywhere; }
+.sx-comments-empty { color: #8a8a8a; font-size: 14px; text-align: center; padding: 24px 0; }

@@ -1,0 +1,4 @@
+/* css/features/player.css — player-scoped helpers (rail/fallback live here so
+ * player.css fails without breaking menus). */
+.sx-tile-fallback { color: #fe2c55; }
+#main-video { pointer-events: auto; cursor: pointer; }

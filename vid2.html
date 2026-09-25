@@ -51,17 +51,18 @@
     <meta name="twitter:image" content="https://shortxx.live/preview.png" />
     <meta name="twitter:creator" content="@shortxx" />
 
-    <!-- Stylesheets -->
+    <!-- Stylesheets: vendor base first, then isolated feature files (one 404 never kills the feed) -->
     <link rel="stylesheet" href="ntok.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
-    <link rel="stylesheet" href="auth-modal.css" />
-    <style>
-        @keyframes livecam-glow {
-            0%, 100% { transform: scale(1); filter: drop-shadow(0 0 2px rgba(255,43,85,0.55)); }
-            50% { transform: scale(1.22); filter: drop-shadow(0 0 9px rgba(255,43,85,1)); }
-        }
-        .livecam-glow { animation: livecam-glow 1.6s ease-in-out infinite; }
-    </style>
+    <link rel="stylesheet" href="css/base.css" />
+    <link rel="stylesheet" href="css/effects.css" />
+    <link rel="stylesheet" href="css/features/auth.css" />
+    <link rel="stylesheet" href="css/features/menu.css" />
+    <link rel="stylesheet" href="css/features/comments.css" />
+    <link rel="stylesheet" href="css/features/discover.css" />
+    <link rel="stylesheet" href="css/features/feed.css" />
+    <link rel="stylesheet" href="css/features/player.css" />
+    <link rel="stylesheet" href="css/features/pwa.css" />
 
     <!-- Scripts -->
     <script>window.__deferredInstallPrompt=null;window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();window.__deferredInstallPrompt=e;});</script>
@@ -401,8 +402,9 @@
         </div>
     </div>
 
-    <!-- JavaScript Modules & Libraries -->
-    <script type="module" src="script.js"></script>
+    <!-- JavaScript: isolated feature modules via js/main.js (dynamic import per feature).
+         Legacy script.js kept on disk for rollback, no longer loaded. -->
+    <script type="module" src="js/main.js"></script>
     <script src="tracking.js"></script>
     <script src="pwa-install.js"></script>
     <script src="pwa-banner.js"></script>
