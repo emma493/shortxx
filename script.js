@@ -475,8 +475,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       '<button data-go="top" style="width:100%;text-align:left;background:none;border:none;">' + row("🔥 Top videos") + "</button>" +
       '<button data-go="saved" style="width:100%;text-align:left;background:none;border:none;">' + row("🔖 Saved videos") + "</button>" +
       '<div style="height:1px;background:#2f2f2f;margin:8px 0;"></div>' +
-      '<a href="https://shrinkme.click/doodstreams" target="_blank" rel="noopener" style="display:block;text-decoration:none;">' + row("🚀 AI Porn") + "</a>" +
-      '<a href="https://shrinkme.click/doodstreams" target="_blank" rel="noopener" style="display:block;text-decoration:none;">' + row("❤️‍🔥 Dating") + "</a>" +
+      '<a href="https://shrinkme.click/doodstreams" target="_blank" rel="noopener" style="display:block;text-decoration:none;">' + row("Live Cams") + "</a>" +
       "</div>";
     document.body.appendChild(wrap);
     menuSheet = wrap;
