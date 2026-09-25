@@ -89,6 +89,39 @@ let currentVideoIndex = 0;
 let currentVideo = null;
 let preloaderElement = null;
 
+// Creator directory (Session A `creators` collection). Best-effort: rules
+// may not be deployed yet — any failure falls back to stable pseudonyms.
+let creatorsById = {};
+
+export async function loadCreators() {
+  try {
+    const snap = await getDocs(
+      query(collection(db, "creators"), where("is_active", "==", true)),
+    );
+    const map = {};
+    snap.forEach((d) => {
+      const data = d.data();
+      if (data.username) {
+        map[d.id] = {
+          username: data.username,
+          avatarUrl: data.avatarUrl || null,
+        };
+      }
+    });
+    creatorsById = map;
+  } catch (err) {
+    console.warn("Creators lookup skipped (rules/data pending):", err);
+    creatorsById = {};
+  }
+  return creatorsById;
+}
+
+function resolveCreator(data, docId) {
+  const ref = data.creatorId && creatorsById[data.creatorId];
+  if (ref) return { name: ref.username, avatarUrl: ref.avatarUrl };
+  return { name: creatorFor(docId), avatarUrl: null };
+}
+
 function readFollows() {
   try {
     return JSON.parse(localStorage.getItem("shortxx_follows") || "[]");
@@ -166,10 +199,14 @@ export async function loadVideosFromFirestore() {
     const q = query(videosRef, where("is_active", "==", true));
     const querySnapshot = await getDocs(q);
 
+    // Creator directory first (best-effort) so names/avatars resolve below.
+    await loadCreators();
+
     let rawVideos = [];
     querySnapshot.forEach((docSnap) => {
       const data = docSnap.data();
       if (data.direct_url) {
+        const who = resolveCreator(data, docSnap.id);
         rawVideos.push({
           id: docSnap.id,
           url: data.direct_url,
@@ -182,7 +219,13 @@ export async function loadVideosFromFirestore() {
           posterUrl: data.poster_url || null,
           views: typeof data.views === 'number' ? data.views : 0,
           likes: typeof data.likes === 'number' ? data.likes : 0,
-          creator: creatorFor(docSnap.id),
+          creator: who.name,
+          avatarUrl: who.avatarUrl,
+          // Optional Session-A fields (captionAI / Upload page). Absent on
+          // legacy docs — every consumer must tolerate missing values.
+          category: typeof data.category === 'string' ? data.category : null,
+          caption: typeof data.caption === 'string' ? data.caption : null,
+          hashtags: Array.isArray(data.hashtags) ? data.hashtags.filter((t) => typeof t === 'string' && t) : [],
         });
       }
     });

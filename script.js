@@ -182,6 +182,47 @@ document.addEventListener("DOMContentLoaded", async () => {
   const userNameElement = document.querySelector(".dynamic-username");
   if (userNameElement) userNameElement.textContent = creator;
 
+  const avatarEl = document.querySelector(".creator-avatar");
+  if (avatarEl && current && current.avatarUrl) avatarEl.src = current.avatarUrl;
+
+  // Caption + hashtags (optional Session-A fields, hidden when absent)
+  const captionBlock = document.querySelector(".caption-block");
+  const captionText = document.querySelector(".caption-text");
+  const captionMore = document.querySelector(".caption-more");
+  if (captionBlock && captionText) {
+    const cap = current && current.caption ? current.caption : "";
+    const tags = current && Array.isArray(current.hashtags) ? current.hashtags.filter(Boolean) : [];
+    captionText.innerHTML = "";
+    if (cap) captionText.appendChild(document.createTextNode(cap + " "));
+    tags.forEach((t) => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.textContent = "#" + t;
+      b.setAttribute("aria-label", "Search hashtag " + t);
+      b.style.cssText = "color:#b2e4ff;font-weight:600;background:none;border:none;padding:0;font:inherit;cursor:pointer;";
+      b.addEventListener("click", (ev) => {
+        ev.stopPropagation();
+        openDiscoverTag(t);
+      });
+      captionText.appendChild(b);
+      captionText.appendChild(document.createTextNode(" "));
+    });
+    captionBlock.style.display = cap || tags.length ? "" : "none";
+    if (captionMore) {
+      const syncMore = () => {
+        const expanded = !captionText.classList.contains("line-clamp-1");
+        captionMore.textContent = expanded ? "less" : "more";
+        captionMore.setAttribute("aria-expanded", String(expanded));
+      };
+      captionMore.addEventListener("click", (ev) => {
+        ev.stopPropagation();
+        captionText.classList.toggle("line-clamp-1");
+        syncMore();
+      });
+      syncMore();
+    }
+  }
+
   if (likeCountEl) likeCountEl.textContent = formatCount(current ? current.likes : 0);
 
   const likedMap = readJson("shortxx_liked", {});
@@ -603,6 +644,10 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     function paintChips() {
       const defs = [["all", "All"], ["following", "Following"], ["saved", "Saved"]];
+      const cats = Array.from(
+        new Set(getAllVideos().map((v) => v.category).filter(Boolean)),
+      ).slice(0, 4);
+      cats.forEach((c) => defs.push(["cat:" + c, c[0].toUpperCase() + c.slice(1)]));
       chipsEl.innerHTML = "";
       defs.forEach(([key, label]) => {
         const b = document.createElement("button");
@@ -627,7 +672,14 @@ document.addEventListener("DOMContentLoaded", async () => {
       pool.forEach((v, i) => {
         if (filter === "following" && !fols.includes(v.creator)) return;
         if (filter === "saved" && !sav.includes(v.id)) return;
-        if (q && !(v.creator || "").toLowerCase().includes(q) && !(v.id || "").toLowerCase().includes(q)) return;
+        if (filter.startsWith("cat:") && v.category !== filter.slice(4)) return;
+        if (q) {
+          const hay = [v.creator, v.id, v.category, v.caption, (v.hashtags || []).join(" ")]
+            .filter(Boolean)
+            .join(" ")
+            .toLowerCase();
+          if (!hay.includes(q)) return;
+        }
         shown++;
         const cell = document.createElement("button");
         cell.style.cssText = "position:relative;aspect-ratio:3/4;background:#121212;overflow:hidden;border:none;padding:0;";
@@ -660,11 +712,21 @@ document.addEventListener("DOMContentLoaded", async () => {
       paintGrid();
       wrap.style.display = "";
     };
+    wrap._search = (text) => {
+      qEl.value = text || "";
+      paintGrid();
+    };
     return wrap;
   }
 
   function openDiscover(filter) {
     buildDiscoverSheet()._open(filter || "all");
+  }
+
+  function openDiscoverTag(tag) {
+    const w = buildDiscoverSheet();
+    w._open("all");
+    w._search(tag);
   }
 
   searchBtns.forEach((b) => b.addEventListener("click", (e) => {
