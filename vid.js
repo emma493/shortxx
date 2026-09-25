@@ -1,22 +1,22 @@
-import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { getFirestore, collection, getDocs, query, where } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
+import { getFirestore, collection, getDocs, query, where } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 
-// Firebase Configuration
+// Firebase Configuration (project: shortxx-live)
 const firebaseConfig = {
-  apiKey: "AIzaSyALnYVISQIb6jNBU9Sds00GLQNhGQ3y4wk",
-  authDomain: "intense-augury-28gvj.firebaseapp.com",
-  projectId: "intense-augury-28gvj",
-  storageBucket: "intense-augury-28gvj.firebasestorage.app",
-  messagingSenderId: "847124482953",
-  appId: "1:847124482953:web:35d42c09894f05891a2f58"
+  apiKey: "AIzaSyBQoIKWaWPKg8luwCjpN8LPaTd-43A1Vqo",
+  authDomain: "shortxx-live.firebaseapp.com",
+  projectId: "shortxx-live",
+  storageBucket: "shortxx-live.firebasestorage.app",
+  messagingSenderId: "820851084501",
+  appId: "1:820851084501:web:5965dc2eabf120f710265c",
+  measurementId: "G-G211R5K286"
 };
 
 // Initialize Firebase App
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
 
-// Connect directly to named Firestore Database instance
-const DATABASE_ID = "ai-studio-shortxxadmindash-86192a98-919e-436c-80b9-836d96e0e32b";
-const db = getFirestore(app, DATABASE_ID);
+// Default Firestore database instance
+const db = getFirestore(app);
 
 // Each entry is now { id, url } so a view can be attributed to the right
 // Firestore video document. (Previously this only stored the bare URL,

@@ -3,19 +3,19 @@
  */
 
 const firebaseConfig = {
-  projectId: "gen-lang-client-0947623046",
-  appId: "1:682124209056:web:21e8f34d7e359c9aab12c5",
-  apiKey: "AIzaSyAGWHZgng64qjRR_MRuoNgbl7w1uVl81jI",
-  authDomain: "gen-lang-client-0947623046.firebaseapp.com",
-  storageBucket: "gen-lang-client-0947623046.firebasestorage.app",
-  messagingSenderId: "682124209056",
-  firestoreDatabaseId: "ai-studio-shortxxadmindash-86192a98-919e-436c-80b9-836d96e0e32b",
+  apiKey: "AIzaSyBQoIKWaWPKg8luwCjpN8LPaTd-43A1Vqo",
+  authDomain: "shortxx-live.firebaseapp.com",
+  projectId: "shortxx-live",
+  storageBucket: "shortxx-live.firebasestorage.app",
+  messagingSenderId: "820851084501",
+  appId: "1:820851084501:web:5965dc2eabf120f710265c",
+  measurementId: "G-G211R5K286",
 };
 
 (function loadFirebaseSDKs() {
   const scripts = [
-    "https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js",
-    "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js",
+    "https://www.gstatic.com/firebasejs/12.19.0/firebase-app-compat.js",
+    "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore-compat.js",
   ];
 
   let loadedCount = 0;
@@ -35,10 +35,8 @@ const firebaseConfig = {
 function initFirebase() {
   let app = !firebase.apps.length ? firebase.initializeApp(firebaseConfig) : firebase.app();
   
-  // Ensure strict connection to the specific named Firestore Database instance
-  const db = firebaseConfig.firestoreDatabaseId
-    ? app.firestore(firebaseConfig.firestoreDatabaseId)
-    : app.firestore();
+  // Default Firestore database instance (project: shortxx-live)
+  const db = app.firestore();
 
   window.shortxxDb = db;
 
