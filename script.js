@@ -511,7 +511,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       "</nav>" +
       '<div class="sx-div"></div>' +
       '<nav>' +
-      '<a class="sidebar-link" href="https://shrinkme.click/doodstreams" target="_blank" rel="noopener"><span class="sx-live-ic"><i class="fas fa-video"></i><span class="sx-live-dot"></span></span><span>Live Cams</span></a>' +
+      '<a class="sidebar-link" href="https://go.whitetrafsa.com?userId=dd571e000ae6f07ef31fa3fb50db3d7353ab3ba1c6c501e61a894d69b80e96ae" target="_blank" rel="noopener"><span class="sx-live-ic"><i class="fas fa-video"></i><span class="sx-live-dot"></span></span><span>Live Cams</span></a>' +
       "</nav>" +
       '<div class="sx-footer">' +
       '<div><a href="#" data-dead>Terms of Service</a><a href="#" data-dead>Privacy Policy</a></div>' +
