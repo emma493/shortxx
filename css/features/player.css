@@ -1,4 +1,14 @@
-/* css/features/player.css — player-scoped helpers (rail/fallback live here so
- * player.css fails without breaking menus). */
+/* css/features/player.css — natural video frame: never stretch/crop.
+ * The column stays phone-width (max 480px); the video letterboxes
+ * (black bars) instead of cover-filling wide screens. */
 .sx-tile-fallback { color: #fe2c55; }
-#main-video { pointer-events: auto; cursor: pointer; }
+#main-video,
+.sx-video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
+  background: #000;
+  pointer-events: auto;
+  cursor: pointer;
+}
