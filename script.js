@@ -505,6 +505,18 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.head.appendChild(st);
   }
 
+  function isInstalled() {
+    try {
+      if (window.matchMedia("(display-mode: standalone)").matches) return true;
+    } catch (e) {}
+    if (window.navigator.standalone === true) return true;
+    try {
+      return localStorage.getItem("shortxx_pwa_installed") === "1";
+    } catch (e) {
+      return false;
+    }
+  }
+
   function buildSidebar() {
     if (sidebarSheet) return sidebarSheet;
     ensureSidebarCss();
@@ -525,6 +537,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       '<button class="sidebar-link" data-go="following"><i class="fas fa-user-check"></i><span>Following feed</span></button>' +
       '<button class="sidebar-link" data-go="top"><i class="fas fa-fire"></i><span>Top videos</span></button>' +
       '<button class="sidebar-link" data-go="saved"><i class="fas fa-bookmark"></i><span>Saved Videos</span></button>' +
+      (isInstalled() ? "" : '<button class="sidebar-link" data-act="install"><i class="fas fa-download"></i><span>Install App</span></button>') +
       "</nav>" +
       '<div class="sx-div"></div>' +
       '<nav>' +
@@ -556,6 +569,24 @@ document.addEventListener("DOMContentLoaded", async () => {
         else if (go === "following" || go === "top") switchFeed(go);
       }),
     );
+    const installEl = wrap.querySelector('[data-act="install"]');
+    if (installEl) {
+      installEl.addEventListener("click", async () => {
+        closeMenu();
+        const helper = window.ShortxxPWA;
+        if (helper && helper.canPrompt()) {
+          const outcome = await helper.promptInstall();
+          if (outcome === "accepted") {
+            try { localStorage.setItem("shortxx_pwa_installed", "1"); } catch (e) {}
+            toast("Shortxx installed");
+          }
+        } else if (/iphone|ipad|ipod/i.test(navigator.userAgent || "")) {
+          toast("iPhone: tap Share, then Add to Home Screen");
+        } else {
+          toast("Use your browser menu: Add to Home Screen");
+        }
+      });
+    }
     return wrap;
   }
 
