@@ -138,7 +138,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
   const current = getCurrentVideo();
   const videoId = current && current.id ? current.id : null;
-  const creator = current && current.creator ? current.creator : "User";
+  const creator = current && current.creator ? current.creator : null;
+  const linkedCreator = !!(current && current.creatorLinked && creator);
 
   // --- 2. Element Selectors (NudiTok DOM hooks) ---
   const likeBtn = document.querySelector(".like-btn");
@@ -178,12 +179,34 @@ document.addEventListener("DOMContentLoaded", async () => {
     }, 2200);
   }
 
-  // --- 4. Creator / real counts ---
+  // --- 4. Linked creator only: real picture + real name, else hidden ---
+  const profileBlock = document.querySelector(".creator-profile");
+  const userLink = document.querySelector(".creator-link");
   const userNameElement = document.querySelector(".dynamic-username");
-  if (userNameElement) userNameElement.textContent = creator;
-
   const avatarEl = document.querySelector(".creator-avatar");
-  if (avatarEl && current && current.avatarUrl) avatarEl.src = current.avatarUrl;
+  const avatarInitial = document.querySelector(".creator-initial");
+
+  function showInitial(letter) {
+    if (avatarEl) avatarEl.style.display = "none";
+    if (avatarInitial) {
+      avatarInitial.textContent = (letter || "?").slice(0, 1).toUpperCase();
+      avatarInitial.style.display = "flex";
+    }
+  }
+
+  if (profileBlock) profileBlock.style.display = linkedCreator ? "" : "none";
+  if (userLink) userLink.style.display = linkedCreator ? "" : "none";
+  if (linkedCreator) {
+    if (userNameElement) userNameElement.textContent = creator;
+    if (current.avatarUrl && avatarEl) {
+      avatarEl.onerror = () => showInitial(creator);
+      avatarEl.src = current.avatarUrl;
+      avatarEl.style.display = "";
+      if (avatarInitial) avatarInitial.style.display = "none";
+    } else {
+      showInitial(creator);
+    }
+  }
 
   // Caption + hashtags (optional Session-A fields, hidden when absent)
   const captionBlock = document.querySelector(".caption-block");
@@ -511,6 +534,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (followBtn) {
     followBtn.addEventListener("click", (e) => {
       e.stopPropagation();
+      if (!linkedCreator || !creator) return;
       const i = follows.indexOf(creator);
       if (i >= 0) {
         follows.splice(i, 1);
@@ -683,13 +707,14 @@ document.addEventListener("DOMContentLoaded", async () => {
         shown++;
         const cell = document.createElement("button");
         cell.style.cssText = "position:relative;aspect-ratio:3/4;background:#121212;overflow:hidden;border:none;padding:0;";
-        cell.setAttribute("aria-label", "Play video by @" + v.creator);
+        const cellName = v.creator || "Shortxx";
+        cell.setAttribute("aria-label", "Play video by @" + cellName);
         const thumb = v.posterUrl
           ? '<img src="' + esc(v.posterUrl) + '" alt="" loading="lazy" style="width:100%;height:100%;object-fit:cover;" />'
           : '<div style="width:100%;height:100%;background:linear-gradient(135deg,#1e1e1e,#121212);display:flex;align-items:center;justify-content:center;color:#fe2c55;font-size:28px;">▶</div>';
         cell.innerHTML =
           thumb +
-          '<span style="position:absolute;left:0;right:0;bottom:0;padding:14px 6px 6px;background:linear-gradient(transparent,rgba(0,0,0,0.8));color:#fff;font-size:11px;font-weight:700;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">@' + esc(v.creator) + " · " + esc(formatCount(v.views)) + "</span>";
+          '<span style="position:absolute;left:0;right:0;bottom:0;padding:14px 6px 6px;background:linear-gradient(transparent,rgba(0,0,0,0.8));color:#fff;font-size:11px;font-weight:700;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">@' + esc(cellName) + " · " + esc(formatCount(v.views)) + "</span>";
         cell.addEventListener("click", () => {
           sessionStorage.setItem("shortxx_pick", v.id);
           location.reload();

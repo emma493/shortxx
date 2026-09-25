@@ -118,8 +118,9 @@ export async function loadCreators() {
 
 function resolveCreator(data, docId) {
   const ref = data.creatorId && creatorsById[data.creatorId];
-  if (ref) return { name: ref.username, avatarUrl: ref.avatarUrl };
-  return { name: creatorFor(docId), avatarUrl: null };
+  if (ref) return { name: ref.username, avatarUrl: ref.avatarUrl || null, linked: true };
+  // Unlinked legacy video: no fake identity — caller hides profile UI.
+  return { name: null, avatarUrl: null, linked: false };
 }
 
 function readFollows() {
@@ -220,6 +221,7 @@ export async function loadVideosFromFirestore() {
           views: typeof data.views === 'number' ? data.views : 0,
           likes: typeof data.likes === 'number' ? data.likes : 0,
           creator: who.name,
+          creatorLinked: who.linked,
           avatarUrl: who.avatarUrl,
           // Optional Session-A fields (captionAI / Upload page). Absent on
           // legacy docs — every consumer must tolerate missing values.
