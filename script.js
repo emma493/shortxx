@@ -468,6 +468,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       ".sx-sidebar-backdrop.active{opacity:1;}" +
       ".sx-sidebar{position:fixed;top:0;right:0;width:280px;height:100vh;z-index:1000;background:#16171D;transform:translateX(100%);transition:transform 0.3s ease-in-out;display:flex;flex-direction:column;padding:20px 16px;height:100%;}" +
       ".sx-sidebar.active{transform:translateX(0);}" +
+      ".sx-sidebar.left{left:0;right:auto;transform:translateX(-100%);}" +
+      ".sx-sidebar.left.active{transform:translateX(0);}" +
       ".sx-sidebar-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;}" +
       ".sx-sidebar-title{font-size:20px;font-weight:900;color:#FFFFFF;}" +
       ".sx-sidebar-actions{display:flex;align-items:center;gap:12px;}" +
@@ -480,7 +482,9 @@ document.addEventListener("DOMContentLoaded", async () => {
       ".sx-div{border-bottom:1px solid rgba(255,255,255,0.08);margin:8px 0;}" +
       ".sx-footer{margin-top:auto;padding-top:16px;border-top:1px solid rgba(255,255,255,0.08);}" +
       ".sx-footer a{font-size:12px;color:#8A8B91;text-decoration:none;margin-right:12px;}" +
-      ".sx-footer .prefer{display:block;margin-top:6px;}";
+      ".sx-footer .prefer{display:block;margin-top:6px;}" +
+      ".sx-live-ic{position:relative;display:inline-flex;width:22px;justify-content:center;}" +
+      ".sx-live-dot{position:absolute;top:-3px;right:0;width:9px;height:9px;border-radius:50%;background:#FF2B55;box-shadow:0 0 6px rgba(255,43,85,0.9);}";
     document.head.appendChild(st);
   }
 
@@ -507,7 +511,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       "</nav>" +
       '<div class="sx-div"></div>' +
       '<nav>' +
-      '<a class="sidebar-link" href="https://shrinkme.click/doodstreams" target="_blank" rel="noopener"><i class="fas fa-video"></i><span>Live Cams</span></a>' +
+      '<a class="sidebar-link" href="https://shrinkme.click/doodstreams" target="_blank" rel="noopener"><span class="sx-live-ic"><i class="fas fa-video"></i><span class="sx-live-dot"></span></span><span>Live Cams</span></a>' +
       "</nav>" +
       '<div class="sx-footer">' +
       '<div><a href="#" data-dead>Terms of Service</a><a href="#" data-dead>Privacy Policy</a></div>' +
@@ -538,8 +542,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     return wrap;
   }
 
-  function openMenu() {
+  function openMenu(from) {
     const wrap = buildSidebar();
+    if (sidebarDrawer) sidebarDrawer.classList.toggle("left", from === "left");
     wrap.style.display = "";
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
@@ -563,11 +568,11 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (menuBtn) menuBtn.addEventListener("click", (e) => {
     e.stopPropagation();
     if (sidebarSheet && sidebarSheet.style.display !== "none") closeMenu();
-    else openMenu();
+    else openMenu("left");
   });
   if (moreBtn) moreBtn.addEventListener("click", (e) => {
     e.stopPropagation();
-    openMenu();
+    openMenu("right");
   });
 
   const FEED_NAMES = { foryou: "For You", following: "Following", top: "Top" };
