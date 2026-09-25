@@ -1,4 +1,5 @@
 import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
+import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-analytics.js";
 import { getFirestore, collection, getDocs, query, where, doc, getDoc, setDoc, updateDoc, increment, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 
 // Firebase Configuration (project: shortxx-live)
@@ -14,6 +15,14 @@ const firebaseConfig = {
 
 // Initialize Firebase App
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
+
+// Firebase Analytics (measurementId G-G211R5K286) — guarded: ad-blockers
+// or unsupported environments must never break video playback.
+try {
+  getAnalytics(app);
+} catch (e) {
+  console.warn("Analytics init skipped:", e);
+}
 
 // Default Firestore database instance
 const db = getFirestore(app);
