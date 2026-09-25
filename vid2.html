@@ -156,7 +156,7 @@
             <div class="ntok-chrome fixed top-0 left-0 right-0 z-40 grid grid-cols-[1fr_auto_1fr] gap-x-1 items-start px-4 md:px-[calc((100%-480px)/2)] pointer-events-none" style="min-height: calc(3.75rem + env(safe-area-inset-top, 0px)); padding-top: env(safe-area-inset-top, 0px);">
                 <div class="pointer-events-auto relative justify-self-start py-1">
                     <div class="flex items-center self-start">
-                        <button class="p-2" aria-label="Open menu" aria-expanded="false" aria-controls="feed-menu" data-dead>
+                        <button id="menu-btn" class="p-2" aria-label="Open menu" aria-expanded="false" aria-controls="feed-menu">
                             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round">
                                 <line x1="3" y1="6" x2="21" y2="6"></line>
                                 <line x1="3" y1="12" x2="21" y2="12"></line>
@@ -177,7 +177,7 @@
                 </div>
                 <div class="pointer-events-none justify-self-center self-start flex h-12 items-center">
                     <div class="pointer-events-auto relative">
-                        <button aria-expanded="false" aria-haspopup="menu" aria-label="Change feed, currently For You" class="inline-flex items-center gap-1 px-3 max-[359px]:px-1.5 min-h-11 text-[16px] font-semibold text-white" data-dead>For You<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="transition-transform" aria-hidden="true">
+                        <button id="feed-btn" aria-expanded="false" aria-haspopup="menu" aria-label="Change feed, currently For You" class="inline-flex items-center gap-1 px-3 max-[359px]:px-1.5 min-h-11 text-[16px] font-semibold text-white"><span id="feed-label">For You</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="transition-transform" aria-hidden="true">
                                 <polyline points="6 9 12 15 18 9"></polyline>
                             </svg>
                         </button>
@@ -192,7 +192,7 @@
                             <path d="M16 21h3a2 2 0 0 0 2-2v-3"></path>
                         </svg>
                     </button>
-                    <button class="p-3 -m-1 inline-flex items-center justify-center min-h-11 min-w-11" aria-label="Search" data-dead>
+                    <button class="search-btn p-3 -m-1 inline-flex items-center justify-center min-h-11 min-w-11" aria-label="Search">
                         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <circle cx="11" cy="11" r="8"></circle>
                             <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
@@ -241,7 +241,7 @@
                                                     <img class="aspect-square h-full w-full object-cover" alt="creator" src="gif.webp">
                                                 </span>
                                             </a>
-                                            <button aria-label="Follow" class="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 min-w-7 min-h-7 flex items-center justify-center" data-dead>
+                                            <button aria-label="Follow" class="follow-btn absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 min-w-7 min-h-7 flex items-center justify-center">
                                                 <span class="follow-badge-pulse w-5 h-5 rounded-full bg-primary flex items-center justify-center shadow-md shadow-primary/40">
                                                     <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="4" stroke-linecap="round">
                                                         <line x1="12" y1="6" x2="12" y2="18"></line>
@@ -260,22 +260,22 @@
                                             </div>
                                             <span class="like-count text-[11px] text-white font-bold text-video-shadow tabular-nums">0</span>
                                         </button>
-                                        <button aria-label="Comments" class="action-btn flex flex-col items-center gap-0.5 p-1" data-dead>
+                                        <button aria-label="Comments" class="comments-btn action-btn flex flex-col items-center gap-0.5 p-1">
                                             <svg width="34" height="34" viewBox="0 0 24 24" class="drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]" fill="none">
                                                 <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" fill="white" stroke="white" stroke-width="0.5" stroke-linecap="round" stroke-linejoin="round"></path>
                                                 <circle cx="8.5" cy="11.5" r="1" fill="#1e1e1e"></circle>
                                                 <circle cx="12" cy="11.5" r="1" fill="#1e1e1e"></circle>
                                                 <circle cx="15.5" cy="11.5" r="1" fill="#1e1e1e"></circle>
                                             </svg>
-                                            <span class="text-[11px] text-white font-bold text-video-shadow tabular-nums">0</span>
+                                            <span class="comments-count text-[11px] text-white font-bold text-video-shadow tabular-nums">0</span>
                                         </button>
-                                        <button aria-label="Save" class="action-btn flex flex-col items-center gap-0.5 relative p-1" data-dead>
+                                        <button aria-label="Save" class="save-btn action-btn flex flex-col items-center gap-0.5 relative p-1">
                                             <div class="relative">
                                                 <svg width="32" height="32" viewBox="0 0 24 24" class="transition-all duration-300 text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]">
-                                                    <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
-                                                </svg>
+                                                <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+                                            </svg>
                                             </div>
-                                            <span class="text-[11px] text-white font-bold text-video-shadow tabular-nums">0</span>
+                                            <span class="save-count text-[11px] text-white font-bold text-video-shadow tabular-nums">0</span>
                                         </button>
                                         <button id="share-btn" aria-label="Share" class="action-btn flex flex-col items-center gap-0.5 p-1">
                                             <svg width="32" height="32" viewBox="0 0 24 24" class="drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]" fill="none">
@@ -312,7 +312,7 @@
                     </svg>
                     <span class="font-medium">Home</span>
                 </a>
-                <a aria-label="Discover" data-tab="true" class="flex flex-col items-center justify-center gap-0.5 flex-1 h-full text-[10px] text-white/50" href="#" data-dead>
+                <a aria-label="Discover" data-tab="true" class="discover-link flex flex-col items-center justify-center gap-0.5 flex-1 h-full text-[10px] text-white/50" href="#">
                     <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                         <circle cx="11" cy="11" r="8"></circle>
                         <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
@@ -329,7 +329,7 @@
                     <span class="text-[21px] leading-none transition-transform group-hover:scale-110 group-active:scale-90 nav-link-attention" aria-hidden="true" style="animation-delay: 2.8s;">❤️‍🔥</span>
                     <span class="font-medium">Dating</span>
                 </a>
-                <button aria-label="More" aria-expanded="false" class="flex flex-col items-center justify-center gap-0.5 flex-1 h-full text-[10px] text-white/50" data-dead>
+                <button id="more-btn" aria-label="More" aria-expanded="false" class="flex flex-col items-center justify-center gap-0.5 flex-1 h-full text-[10px] text-white/50">
                     <span class="relative">
                         <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                             <line x1="3" y1="6" x2="21" y2="6"></line>
