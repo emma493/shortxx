@@ -90,20 +90,25 @@ document.addEventListener("DOMContentLoaded", async () => {
   // --- 1. Firestore Video Fetching & Preload ---
   await loadVideosFromFirestore();
 
-  const video = document.querySelector("video");
-  const videoContainer = document.querySelector(".video-container");
+  const video = document.getElementById("main-video");
+  const playerRegion = document.getElementById("player-region");
 
   if (video) {
     playNextVideo(video);
   }
 
-  // --- 2. Element Selectors ---
+  // --- 2. Element Selectors (NudiTok DOM hooks) ---
   const likeBtn = document.querySelector(".like-btn");
-  const muteBtn = document.querySelector(".mute-btn");
-  const downloadBtn = document.querySelector(".download-btn");
-  const loader = document.querySelector(".loader");
+  const likeHeart = document.querySelector(".like-heart");
+  const muteBtns = document.querySelectorAll(".mute-btn");
+  const unmuteHint = document.getElementById("unmute-hint");
+  const unmuteDismiss = document.getElementById("unmute-dismiss");
+  const shareBtn = document.getElementById("share-btn");
+  const fsBtn = document.getElementById("fs-btn");
+  const progressWrap = document.getElementById("ntok-progress");
+  const progressFill = document.getElementById("ntok-progress-fill");
 
-  // --- 3. Display Random Usernames ---
+  // --- 3. Display Random Username ---
   const usernames = [
     "LilyGrace",
     "AvaRose",
@@ -134,45 +139,63 @@ document.addEventListener("DOMContentLoaded", async () => {
     userNameElement.textContent = randomName;
   }
 
-  // --- 4. Display Random Likes Count ---
+  // --- 4. Display Random Counts (likes / views / watching) ---
   const likeCountElement = document.querySelector(".like-count");
   if (likeCountElement) {
     const randomLikes = (Math.random() * 98 + 1).toFixed(1) + "K";
     likeCountElement.textContent = randomLikes;
   }
-
-  // --- 5. Video Loader Handling ---
-  if (video && loader) {
-    video.addEventListener("waiting", () => (loader.style.display = "block"));
-    video.addEventListener("playing", () => (loader.style.display = "none"));
-    video.addEventListener("canplay", () => (loader.style.display = "none"));
-    if (video.readyState >= 3) loader.style.display = "none";
+  const viewsElement = document.querySelector(".views-count");
+  if (viewsElement) {
+    const views = (Math.random() * 9 + 1).toFixed(1) + "K";
+    viewsElement.textContent = "· " + views + " views";
+  }
+  const watchingElement = document.querySelector(".watching-num");
+  if (watchingElement) {
+    watchingElement.textContent = String(
+      Math.floor(Math.random() * 45) + 12,
+    );
   }
 
-  // --- 6. Double Tap & Like Logic ---
+  // --- 5. Double Tap & Like Logic ---
   let lastTap = 0;
-  const bigHeart = document.createElement("i");
-  bigHeart.className = "fas fa-heart big-heart";
-  if (videoContainer) videoContainer.appendChild(bigHeart);
 
   const toggleLike = () => {
     if (!likeBtn) return;
-    likeBtn.classList.toggle("liked");
-    const icon = likeBtn.querySelector("i");
-    if (icon) {
-      icon.classList.remove("animate-pop");
-      void icon.offsetWidth;
-      icon.classList.add("animate-pop");
+    const pressed = likeBtn.getAttribute("aria-pressed") === "true";
+    likeBtn.setAttribute("aria-pressed", String(!pressed));
+    likeBtn.setAttribute(
+      "aria-label",
+      !pressed ? "Unlike" : "Like",
+    );
+    if (likeHeart) {
+      likeHeart.classList.toggle("text-white", pressed);
+      likeHeart.classList.toggle("text-primary", !pressed);
     }
   };
 
   const showBigHeart = (x, y) => {
-    bigHeart.style.left = `${x}px`;
-    bigHeart.style.top = `${y}px`;
-    bigHeart.classList.remove("active");
-    void bigHeart.offsetWidth;
-    bigHeart.classList.add("active");
-    if (likeBtn && !likeBtn.classList.contains("liked")) {
+    const heart = document.createElement("div");
+    heart.setAttribute("aria-hidden", "true");
+    heart.innerHTML =
+      '<svg width="96" height="96" viewBox="0 0 24 24" fill="#fe2c55" stroke="none" style="filter:drop-shadow(0 4px 12px rgba(0,0,0,0.5))"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>';
+    heart.style.cssText =
+      "position:fixed;left:" +
+      x +
+      "px;top:" +
+      y +
+      "px;transform:translate(-50%,-50%) scale(0);opacity:0;z-index:80;pointer-events:none;transition:transform 0.25s ease-out,opacity 0.4s ease-out;";
+    document.body.appendChild(heart);
+    requestAnimationFrame(() => {
+      heart.style.transform = "translate(-50%,-50%) scale(1.2)";
+      heart.style.opacity = "1";
+    });
+    setTimeout(() => {
+      heart.style.transform = "translate(-50%,-50%) scale(1)";
+      heart.style.opacity = "0";
+    }, 450);
+    setTimeout(() => heart.remove(), 900);
+    if (likeBtn && likeBtn.getAttribute("aria-pressed") !== "true") {
       toggleLike();
     }
   };
@@ -184,19 +207,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
-  // --- 7. Mute / Unmute Logic ---
+  // --- 6. Mute / Unmute Logic ---
   function updateMuteUI(muted) {
     if (!video) return;
     video.muted = muted;
-    if (muteBtn) {
-      const icon = muteBtn.querySelector("i");
-      if (muted) {
-        if (icon) icon.className = "fas fa-volume-mute animate-pop";
-        muteBtn.style.opacity = "0.5";
-      } else {
-        if (icon) icon.className = "fas fa-volume-up animate-pop";
-        muteBtn.style.opacity = "1";
-      }
+    if (unmuteHint) {
+      unmuteHint.style.display = muted ? "" : "none";
     }
   }
 
@@ -207,10 +223,17 @@ document.addEventListener("DOMContentLoaded", async () => {
     updateMuteUI(nextState);
   }
 
-  if (muteBtn) {
-    muteBtn.addEventListener("click", (e) => {
+  muteBtns.forEach((btn) => {
+    btn.addEventListener("click", (e) => {
       e.stopPropagation();
       toggleAudio();
+    });
+  });
+
+  if (unmuteDismiss && unmuteHint) {
+    unmuteDismiss.addEventListener("click", (e) => {
+      e.stopPropagation();
+      unmuteHint.style.display = "none";
     });
   }
 
@@ -222,21 +245,15 @@ document.addEventListener("DOMContentLoaded", async () => {
     updateMuteUI(savedAudioPreference === "true");
   }
 
-  // --- 8. Click Video Interaction ---
-  if (videoContainer && video) {
-    videoContainer.addEventListener("click", (e) => {
-      if (
-        e.target.closest(".side-bar") ||
-        e.target.closest(".video-player-controls") ||
-        e.target.closest(".top-nav") ||
-        e.target.closest(".bottom-info") ||
-        e.target.closest(".wa-overlay")
-      ) {
+  // --- 7. Tap Video Interaction (single tap = play, double tap = like) ---
+  if (playerRegion && video) {
+    playerRegion.addEventListener("click", (e) => {
+      if (e.target.closest("button,a,[role=progressbar]")) {
         return;
       }
 
-      let currentTime = new Date().getTime();
-      let tapLength = currentTime - lastTap;
+      const currentTime = new Date().getTime();
+      const tapLength = currentTime - lastTap;
       if (tapLength < 300 && tapLength > 0) {
         showBigHeart(e.clientX, e.clientY);
         lastTap = currentTime;
@@ -245,53 +262,67 @@ document.addEventListener("DOMContentLoaded", async () => {
       lastTap = currentTime;
 
       if (video.paused) {
-        video.play();
-        spawnFeedbackIcon("fa-play");
+        video.play().catch(() => {});
       }
     });
   }
 
-  function spawnFeedbackIcon(iconClass) {
-    if (!videoContainer) return;
-    const icon = document.createElement("div");
-    icon.className = "feedback-icon";
-    icon.innerHTML = `<i class="fas ${iconClass}"></i>`;
-    videoContainer.appendChild(icon);
-    setTimeout(() => icon.remove(), 600);
-  }
-
-  // --- 9. Pure Video Download Feature ---
-  if (downloadBtn) {
-    downloadBtn.addEventListener("click", async (e) => {
+  // --- 8. Share (Web Share API with download fallback) ---
+  if (shareBtn) {
+    shareBtn.addEventListener("click", async (e) => {
       e.stopPropagation();
-
-      const icon = downloadBtn.querySelector("i");
-      if (icon) {
-        icon.classList.add("animate-pop");
-        setTimeout(() => icon.classList.remove("animate-pop"), 400);
+      const shareSource = currentVideoDirectUrl || (video && video.src) || location.href;
+      if (navigator.share) {
+        try {
+          await navigator.share({ url: shareSource, title: document.title });
+          return;
+        } catch (err) {
+          if (err && err.name === "AbortError") return;
+        }
       }
-
-      const downloadSource = currentVideoDirectUrl || video.src;
-
       try {
-        const response = await fetch(downloadSource);
+        const response = await fetch(shareSource);
         const blob = await response.blob();
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.style.display = "none";
         a.href = url;
-        a.download = `video_${new Date().getTime()}.mp4`;
+        a.download = "video_" + new Date().getTime() + ".mp4";
         document.body.appendChild(a);
         a.click();
         window.URL.revokeObjectURL(url);
       } catch (error) {
-        console.error("Download failed:", error);
-        window.open(downloadSource, "_blank");
+        console.error("Share failed:", error);
+        window.open(shareSource, "_blank");
       }
     });
   }
 
-  // --- 10. Navigation & Swipe Handling ---
+  // --- 9. Fullscreen Toggle ---
+  if (fsBtn) {
+    fsBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (document.fullscreenElement) {
+        document.exitFullscreen().catch(() => {});
+      } else {
+        document.documentElement.requestFullscreen().catch(() => {});
+      }
+      fsBtn.setAttribute(
+        "aria-pressed",
+        String(!document.fullscreenElement),
+      );
+    });
+  }
+
+  // --- 10. Dead (visual-only) Controls ---
+  document.querySelectorAll("[data-dead]").forEach((el) => {
+    el.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+    });
+  });
+
+  // --- 11. Navigation & Swipe Handling (index.html <-> vid2.html) ---
   const nextPage = document.body.dataset.next;
   const prevPage = document.body.dataset.prev;
 
@@ -318,7 +349,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   });
 
   window.addEventListener("touchend", (e) => {
-    let touchendY = e.changedTouches[0].screenY;
+    const touchendY = e.changedTouches[0].screenY;
     if (touchstartY - touchendY > 50) handleScrollAction(true);
     if (touchendY - touchstartY > 50) navigateToPrev();
   });
@@ -347,161 +378,45 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   });
 
-  // --- 11. Video Progress Bar Controls ---
-  const progressBar = document.querySelector(".video-progress-bar");
-  const progressFill = document.querySelector(".progress-fill");
-
-  if (video && progressBar && progressFill) {
-    video.addEventListener("loadedmetadata", () => {
-      progressBar.max = video.duration;
-    });
-
-    video.addEventListener("timeupdate", () => {
+  // --- 12. Video Progress Bar (seek + fill) ---
+  if (video && progressWrap && progressFill) {
+    const setFill = () => {
       if (!video.duration) return;
-      const percent = (video.currentTime / video.duration) * 100;
-      progressBar.value = video.currentTime;
-      progressFill.style.width = percent + "%";
-    });
-
-    progressBar.addEventListener("input", () => {
-      video.currentTime = progressBar.value;
-      const percent = (progressBar.value / progressBar.max) * 100;
-      progressFill.style.width = percent + "%";
-    });
-  }
-
-  // --- 12. WhatsApp Overlay Tracker ---
-  const markWhatsAppJoined = () => {
-    localStorage.setItem("whatsappJoined", "true");
-  };
-
-  const sidebarWhatsAppBtn = document.querySelector(".whatsapp-btn");
-  if (sidebarWhatsAppBtn) {
-    sidebarWhatsAppBtn.addEventListener("click", markWhatsAppJoined);
-  }
-
-  const hasJoined = localStorage.getItem("whatsappJoined") === "true";
-
-  if (!hasJoined) {
-    const today = new Date().toDateString();
-    const lastDate = localStorage.getItem("waLastDate");
-    if (lastDate !== today) {
-      localStorage.setItem("waLastDate", today);
-      localStorage.setItem("waDailyIgnores", "0");
-    }
-
-    let dailyIgnores = parseInt(
-      localStorage.getItem("waDailyIgnores") || "0",
-      10,
-    );
-    let maxDailyLimit = parseInt(
-      sessionStorage.getItem("waMaxLimit") || "0",
-      10,
-    );
-
-    if (!maxDailyLimit) {
-      maxDailyLimit = Math.floor(Math.random() * 4) + 3;
-      sessionStorage.setItem("waMaxLimit", maxDailyLimit.toString());
-    }
-
-    let waPageViews =
-      parseInt(sessionStorage.getItem("waPageViews") || "0", 10) + 1;
-    sessionStorage.setItem("waPageViews", waPageViews.toString());
-
-    let waTargetViews = parseInt(
-      sessionStorage.getItem("waTargetViews") || "0",
-      10,
-    );
-    if (!waTargetViews) {
-      waTargetViews = Math.floor(Math.random() * 3) + 3;
-      sessionStorage.setItem("waTargetViews", waTargetViews.toString());
-    }
-
-    if (dailyIgnores < maxDailyLimit && waPageViews >= waTargetViews) {
-      const overlay = document.getElementById("wa-popup-overlay");
-      const modalBtn = document.getElementById("wa-modal-join-btn");
-      const progressFill = document.getElementById("wa-progress-bar-fill");
-
-      if (overlay && modalBtn && progressFill) {
-        const durationSec = Math.floor(Math.random() * 8) + 5;
-        const durationMs = durationSec * 1000;
-
-        overlay.classList.add("active");
-
-        let startTime = null;
-        let animationFrame = null;
-
-        const updateProgress = (timestamp) => {
-          if (!startTime) startTime = timestamp;
-          const elapsed = timestamp - startTime;
-          const remainingPercent = Math.max(
-            0,
-            100 - (elapsed / durationMs) * 100,
-          );
-
-          progressFill.style.width = remainingPercent + "%";
-
-          if (elapsed < durationMs) {
-            animationFrame = requestAnimationFrame(updateProgress);
-          } else {
-            overlay.classList.remove("active");
-            dailyIgnores++;
-            localStorage.setItem("waDailyIgnores", dailyIgnores.toString());
-            sessionStorage.setItem("waPageViews", "0");
-            sessionStorage.setItem(
-              "waTargetViews",
-              (Math.floor(Math.random() * 3) + 3).toString(),
-            );
-          }
-        };
-
-        animationFrame = requestAnimationFrame(updateProgress);
-
-        modalBtn.addEventListener("click", () => {
-          if (animationFrame) cancelAnimationFrame(animationFrame);
-          markWhatsAppJoined();
-          overlay.classList.remove("active");
-        });
-      }
-    }
-  }
-
-  // --- 13. Notification Opt-In Bottom Banner Card ---
-  const notifyBanner = document.getElementById("notify-banner");
-  const notifyClose = document.getElementById("notify-banner-close");
-  const notifyCta = document.getElementById("notify-banner-cta");
-
-  if (notifyBanner) {
-    const dismissed =
-      localStorage.getItem("notificationBannerDismissed") === "true";
-
-    const dismissBanner = () => {
-      notifyBanner.classList.remove("show");
-      notifyBanner.classList.add("hide");
-      localStorage.setItem("notificationBannerDismissed", "true");
-      setTimeout(() => notifyBanner.remove(), 500);
+      const ratio = video.currentTime / video.duration;
+      progressFill.style.transform = "scaleX(" + ratio + ")";
+      progressWrap.setAttribute(
+        "aria-valuenow",
+        String(Math.round(ratio * 100)),
+      );
     };
 
-    if (!dismissed) {
-      setTimeout(() => {
-        if (document.body.contains(notifyBanner)) {
-          notifyBanner.classList.add("show");
-        }
-      }, 1200);
-    }
+    video.addEventListener("timeupdate", setFill);
+    video.addEventListener("loadedmetadata", setFill);
 
-    if (notifyClose) {
-      notifyClose.addEventListener("click", (e) => {
-        e.stopPropagation();
-        dismissBanner();
-      });
-    }
+    const seekFromEvent = (e) => {
+      const rect = progressWrap.getBoundingClientRect();
+      const x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
+      const ratio = Math.min(Math.max(x / rect.width, 0), 1);
+      if (video.duration) {
+        video.currentTime = ratio * video.duration;
+        setFill();
+      }
+    };
 
-    if (notifyCta) {
-      notifyCta.addEventListener("click", (e) => {
-        e.stopPropagation();
-        dismissBanner();
-      });
-    }
+    let seeking = false;
+    progressWrap.addEventListener("pointerdown", (e) => {
+      seeking = true;
+      progressWrap.setPointerCapture(e.pointerId);
+      seekFromEvent(e);
+    });
+    progressWrap.addEventListener("pointermove", (e) => {
+      if (seeking) seekFromEvent(e);
+    });
+    progressWrap.addEventListener("pointerup", () => {
+      seeking = false;
+    });
+    progressWrap.addEventListener("pointercancel", () => {
+      seeking = false;
+    });
   }
 });
