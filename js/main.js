@@ -8,8 +8,9 @@ import { store, publishIdentity } from "./store.js";
 import { makeToast } from "./lib/dom.js";
 
 /* js/main.js — isolated bootstrap. Each feature loads via dynamic
- * import() with its own try/catch so one broken feature never takes
- * down the whole feed (micro-frontend style fault isolation). */
+ * import() IN PARALLEL with its own timeout + try/catch, so one slow
+ * CDN (e.g. firebase-auth) or broken feature never blocks the rest —
+ * every button wires up even on a bad network. */
 
 const FEATURES = [
   "player",
@@ -31,8 +32,21 @@ const FEATURES = [
   "progress",
 ];
 
+// Slow networks must not serialize-block the UI: cap each feature.
+const FEATURE_TIMEOUT_MS = 10000;
+
 function report(feature, err) {
   console.warn("[shortxx] feature failed: " + feature, err);
+}
+
+function withTimeout(promise, ms, label) {
+  let timer = null;
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(() => reject(new Error("timeout: " + label)), ms);
+  });
+  return Promise.race([promise, timeout]).finally(() => {
+    if (timer) clearTimeout(timer);
+  });
 }
 
 document.addEventListener("DOMContentLoaded", async () => {
@@ -80,20 +94,28 @@ document.addEventListener("DOMContentLoaded", async () => {
   // Safety net: if the network hangs, unblock the player attempt anyway.
   setTimeout(videosReady, 12000);
 
-  // 2. Load each feature in dependency order, isolated
-  for (const name of FEATURES) {
-    try {
-      const mod = await import("./features/" + name + ".js");
+  // 2. Load ALL features in parallel — order-independent by design
+  // (they sync via store + sx:* window events, never direct imports).
+  const results = await Promise.allSettled(
+    FEATURES.map(async (name) => {
+      const mod = await withTimeout(
+        import("./features/" + name + ".js"),
+        FEATURE_TIMEOUT_MS,
+        name,
+      );
       if (mod && typeof mod.init === "function") {
-        await mod.init(ctx);
+        await withTimeout(Promise.resolve().then(() => mod.init(ctx)), FEATURE_TIMEOUT_MS, name + ":init");
       }
-    } catch (e) {
-      report(name, e);
+    }),
+  );
+  results.forEach((r, i) => {
+    if (r.status === "rejected") {
+      report(FEATURES[i], r.reason);
       try {
-        toast("Feature unavailable: " + name);
+        toast("Feature unavailable: " + FEATURES[i]);
       } catch (err) {}
     }
-  }
+  });
   await load;
 
   // Keep feed mode import referenced (deep links above use it)
