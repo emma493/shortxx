@@ -21,11 +21,24 @@ function paint(toast) {
   if (!bodyEl) return;
   const name = store.creator;
   const current = store.current;
-  const list = videosOf(name);
+  const list = videosOf(name).sort((a, b) => (b.createdAtMillis || 0) - (a.createdAtMillis || 0));
   const views = list.reduce((s, v) => s + (v.views || 0), 0);
-  const likes = list.reduce((s, v) => s + (v.likes || 0), 0);
+  const likesSum = list.reduce((s, v) => s + (v.likes || 0), 0);
   const following = store.follows.includes(name);
   const avatar = current && current.avatarUrl ? current.avatarUrl : null;
+
+  // Exact reference order (Following/Followers/Likes) once Admin writes the
+  // counts on the creator doc; until then honest computed values.
+  const exact = current && typeof current.followers === "number" && typeof current.following === "number";
+  const stat1 = exact
+    ? { v: current.following, l: "Following" }
+    : { v: list.length, l: "Videos" };
+  const stat2 = exact
+    ? { v: current.followers, l: "Followers" }
+    : { v: likesSum, l: "Likes" };
+  const stat3 = exact
+    ? { v: current.likesTotal != null ? current.likesTotal : likesSum, l: "Likes" }
+    : { v: views, l: "Views" };
 
   bodyEl.innerHTML =
     '<div class="cp-id">' +
@@ -37,9 +50,9 @@ function paint(toast) {
     (current && current.bio ? '<div class="cp-bio">' + esc(current.bio) + "</div>" : "") +
     "</div>" +
     '<div class="cp-stats">' +
-    '<div class="cp-stat"><b>' + esc(formatCount(list.length)) + "</b> Videos</div>" +
-    '<div class="cp-stat"><b>' + esc(formatCount(likes)) + "</b> Likes</div>" +
-    '<div class="cp-stat"><b>' + esc(formatCount(views)) + "</b> Views</div></div>" +
+    '<div class="cp-stat"><b>' + esc(formatCount(stat1.v)) + "</b> " + stat1.l + "</div>" +
+    '<div class="cp-stat"><b>' + esc(formatCount(stat2.v)) + "</b> " + stat2.l + "</div>" +
+    '<div class="cp-stat"><b>' + esc(formatCount(stat3.v)) + "</b> " + stat3.l + "</div></div>" +
     '<div class="cp-actions"><button class="cp-follow' + (following ? " following" : "") + '">' +
     (following ? "Following" : "Follow") +
     "</button></div>" +

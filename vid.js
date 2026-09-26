@@ -102,10 +102,14 @@ export async function loadCreators() {
     snap.forEach((d) => {
       const data = d.data();
       if (data.username) {
+        const num = (v) => (typeof v === "number" ? v : null);
         map[d.id] = {
           username: data.username,
           avatarUrl: data.avatarUrl || null,
           bio: typeof data.bio === "string" ? data.bio : null,
+          followers: num(data.followers),
+          following: num(data.following),
+          likesTotal: num(data.likesTotal),
         };
       }
     });
@@ -119,9 +123,19 @@ export async function loadCreators() {
 
 function resolveCreator(data, docId) {
   const ref = data.creatorId && creatorsById[data.creatorId];
-  if (ref) return { name: ref.username, avatarUrl: ref.avatarUrl || null, bio: ref.bio || null, linked: true };
+  if (ref) {
+    return {
+      name: ref.username,
+      avatarUrl: ref.avatarUrl || null,
+      bio: ref.bio || null,
+      followers: ref.followers,
+      following: ref.following,
+      likesTotal: ref.likesTotal,
+      linked: true,
+    };
+  }
   // Unlinked legacy video: no fake identity — caller hides profile UI.
-  return { name: null, avatarUrl: null, bio: null, linked: false };
+  return { name: null, avatarUrl: null, bio: null, followers: null, following: null, likesTotal: null, linked: false };
 }
 
 function readFollows() {
@@ -209,6 +223,18 @@ export async function loadVideosFromFirestore() {
       const data = docSnap.data();
       if (data.direct_url) {
         const who = resolveCreator(data, docSnap.id);
+        let createdAtMillis = 0;
+        const ts = data.created_at || data.createdAt;
+        if (ts && typeof ts.toMillis === "function") {
+          try {
+            createdAtMillis = ts.toMillis();
+          } catch (e) {}
+        } else if (ts && typeof ts._seconds === "number") {
+          createdAtMillis = ts._seconds * 1000;
+        } else if (typeof ts === "string") {
+          const p = Date.parse(ts);
+          if (!isNaN(p)) createdAtMillis = p;
+        }
         rawVideos.push({
           id: docSnap.id,
           url: data.direct_url,
@@ -229,6 +255,7 @@ export async function loadVideosFromFirestore() {
           category: typeof data.category === 'string' ? data.category : null,
           caption: typeof data.caption === 'string' ? data.caption : null,
           hashtags: Array.isArray(data.hashtags) ? data.hashtags.filter((t) => typeof t === 'string' && t) : [],
+          createdAtMillis,
         });
       }
     });
