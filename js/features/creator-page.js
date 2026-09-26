@@ -33,7 +33,9 @@ function paint(toast) {
       ? '<img class="cp-avatar" src="' + esc(avatar) + '" alt="" />'
       : '<div class="cp-avatar-fallback">' + esc((name || "?").slice(0, 1).toUpperCase()) + "</div>") +
     '<div class="cp-name">' + esc(name || "Shortxx") + "</div>" +
-    '<div class="cp-handle">@' + esc(name || "shortxx") + "</div></div>" +
+    '<div class="cp-handle">@' + esc(name || "shortxx") + "</div>" +
+    (current && current.bio ? '<div class="cp-bio">' + esc(current.bio) + "</div>" : "") +
+    "</div>" +
     '<div class="cp-stats">' +
     '<div class="cp-stat"><b>' + esc(formatCount(list.length)) + "</b><span>Videos</span></div>" +
     '<div class="cp-stat"><b>' + esc(formatCount(likes)) + "</b><span>Likes</span></div>" +

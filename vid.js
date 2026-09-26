@@ -105,6 +105,7 @@ export async function loadCreators() {
         map[d.id] = {
           username: data.username,
           avatarUrl: data.avatarUrl || null,
+          bio: typeof data.bio === "string" ? data.bio : null,
         };
       }
     });
@@ -118,9 +119,9 @@ export async function loadCreators() {
 
 function resolveCreator(data, docId) {
   const ref = data.creatorId && creatorsById[data.creatorId];
-  if (ref) return { name: ref.username, avatarUrl: ref.avatarUrl || null, linked: true };
+  if (ref) return { name: ref.username, avatarUrl: ref.avatarUrl || null, bio: ref.bio || null, linked: true };
   // Unlinked legacy video: no fake identity — caller hides profile UI.
-  return { name: null, avatarUrl: null, linked: false };
+  return { name: null, avatarUrl: null, bio: null, linked: false };
 }
 
 function readFollows() {

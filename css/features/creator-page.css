@@ -12,6 +12,7 @@
 .cp-avatar-fallback { width: 96px; height: 96px; border-radius: 50%; background: #fe2c55; color: #fff; font-size: 40px; font-weight: 800; display: flex; align-items: center; justify-content: center; }
 .cp-name { color: #fff; font-size: 18px; font-weight: 800; margin: 12px 0 2px; }
 .cp-handle { color: #8a8a8a; font-size: 13px; }
+.cp-bio { color: #e8e8e8; font-size: 13px; line-height: 1.5; margin-top: 8px; max-width: 320px; text-align: center; }
 .cp-stats { display: flex; justify-content: center; gap: 24px; padding: 14px 16px; }
 .cp-stat { display: flex; flex-direction: column; align-items: center; }
 .cp-stat b { color: #fff; font-size: 16px; }
