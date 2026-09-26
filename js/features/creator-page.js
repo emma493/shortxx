@@ -37,13 +37,13 @@ function paint(toast) {
     (current && current.bio ? '<div class="cp-bio">' + esc(current.bio) + "</div>" : "") +
     "</div>" +
     '<div class="cp-stats">' +
-    '<div class="cp-stat"><b>' + esc(formatCount(list.length)) + "</b><span>Videos</span></div>" +
-    '<div class="cp-stat"><b>' + esc(formatCount(likes)) + "</b><span>Likes</span></div>" +
-    '<div class="cp-stat"><b>' + esc(formatCount(views)) + "</b><span>Views</span></div></div>" +
-    '<button class="cp-follow' + (following ? " following" : "") + '">' +
+    '<div class="cp-stat"><b>' + esc(formatCount(list.length)) + "</b> Videos</div>" +
+    '<div class="cp-stat"><b>' + esc(formatCount(likes)) + "</b> Likes</div>" +
+    '<div class="cp-stat"><b>' + esc(formatCount(views)) + "</b> Views</div></div>" +
+    '<div class="cp-actions"><button class="cp-follow' + (following ? " following" : "") + '">' +
     (following ? "Following" : "Follow") +
-    "</button>" +
-    '<div class="cp-tabs"><button class="cp-tab">Videos</button></div>' +
+    "</button></div>" +
+    '<div class="cp-tabs"><button class="cp-tab on"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="7" height="7" rx="1"></rect><rect x="14" y="3" width="7" height="7" rx="1"></rect><rect x="3" y="14" width="7" height="7" rx="1"></rect><rect x="14" y="14" width="7" height="7" rx="1"></rect></svg>Videos</button></div>' +
     '<div class="cp-grid">' +
     (list.length
       ? list
@@ -134,10 +134,10 @@ export async function init(ctx) {
   root.style.display = "none";
   root.innerHTML =
     '<div class="cp-backdrop" data-close></div>' +
-    '<aside class="cp-panel" role="dialog" aria-label="Creator page">' +
+    '<div class="cp-panel" role="dialog" aria-label="Creator page"><div class="cp-centered">' +
     '<div class="cp-head"><button class="cp-back" data-close aria-label="Back">←</button>' +
-    '<div class="cp-head-name" data-cp-name>@</div></div>' +
-    '<div class="cp-body" data-body></div></aside>';
+    '<div class="cp-head-name" data-cp-name>@</div><div class="cp-head-spacer"></div></div>' +
+    '<div class="cp-body" data-body></div></div></div>';
   document.body.appendChild(root);
   panel = root.querySelector(".cp-panel");
   backdrop = root.querySelector(".cp-backdrop");
