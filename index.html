@@ -376,9 +376,10 @@
                     <input type="password" id="auth-password" placeholder="Password" required autocomplete="current-password">
                 </div>
 
-                <!-- Join Now Action Button -->
-                <div style="margin-top: 16px;">
-                    <button type="submit" id="submit-signup-btn" class="btn-primary" style="width: 100%;">Join Now</button>
+                <!-- Action Buttons Row -->
+                <div class="auth-btn-row">
+                    <button type="button" id="submit-login-btn" class="btn-secondary">Log In</button>
+                    <button type="submit" id="submit-signup-btn" class="btn-primary">Sign Up</button>
                 </div>
             </form>
 
@@ -397,8 +398,10 @@
                 Continue with Google
             </button>
 
+            <p class="privacy-note">Private: Google shares only your email with us. Nothing ever appears on your Google account.</p>
+
             <!-- Quick Login Button -->
-            <button id="quick-login-btn" class="btn-quick-login"><span class="ql-bolt"><i class="fas fa-bolt"></i></span><span class="ql-text">Quick Login<span class="ql-sub">Instant guest access — no details needed</span></span></button>
+            <button id="quick-login-btn" class="btn-quick-login">⚡ Quick Login (Guest Session)</button>
         </div>
     </div>
 

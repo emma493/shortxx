@@ -1,5 +1,3 @@
-import { store } from "../store.js";
-
 /* js/features/menu.js — slide-out sidebar drawer only. CSS lives in
  * css/features/menu.css (moved out of JS injection). */
 
@@ -34,7 +32,7 @@ export async function init(ctx) {
       '<aside class="sx-sidebar" aria-label="Site navigation">' +
       '<div class="sx-sidebar-header"><div class="sx-sidebar-title">Shortxx</div>' +
       '<div class="sx-sidebar-actions">' +
-      '<button class="sx-login-btn" data-login><i class="fas fa-sign-in-alt"></i><span data-auth-label>Log In</span></button>' +
+      '<button class="sx-signup-btn" data-signup>Sign Up</button>' +
       '<button class="sx-close-btn" data-close aria-label="Close menu">✕</button></div></div>' +
       '<nav><button class="sidebar-link active-link" data-go="home"><i class="fas fa-home"></i><span>Home</span></button>' +
       '<button class="sidebar-link" data-go="discover"><i class="fas fa-compass"></i><span>Discover</span></button>' +
@@ -52,15 +50,9 @@ export async function init(ctx) {
     sheet = wrap;
     drawer = wrap.querySelector(".sx-sidebar");
     wrap.querySelectorAll("[data-close]").forEach((el) => el.addEventListener("click", closeMenu));
-    wrap.querySelector("[data-login]").addEventListener("click", async () => {
-      if (store.authUser && !store.authUser.isAnonymous) {
-        closeMenu();
-        const ok = window.sxAuthSignOut ? await window.sxAuthSignOut() : false;
-        toast(ok ? "Logged out" : "Log out failed");
-      } else {
-        closeMenu();
-        if (window.sxOpenAuth) window.sxOpenAuth();
-      }
+    wrap.querySelector("[data-signup]").addEventListener("click", () => {
+      closeMenu();
+      if (window.sxOpenAuth) window.sxOpenAuth();
     });
     wrap.querySelectorAll("[data-dead]").forEach((el) =>
       el.addEventListener("click", (e) => e.preventDefault()),
@@ -95,29 +87,11 @@ export async function init(ctx) {
         }
       });
     }
-    // Paint login label when auth state changes
-    window.addEventListener("sx:auth-changed", paintAuth);
     return wrap;
   }
 
-  function paintAuth() {
-    if (!sheet) return;
-    const label = sheet.querySelector("[data-login] [data-auth-label]");
-    const btn = sheet.querySelector("[data-login]");
-    if (!label || !btn) return;
-    if (store.authUser && !store.authUser.isAnonymous) {
-      label.textContent = "Log Out";
-      btn.setAttribute("aria-label", "Log out");
-    } else {
-      label.textContent = "Log In";
-      btn.setAttribute("aria-label", "Log in");
-    }
-  }
-
-  function openMenu(from) {
+  function openMenu() {
     const wrap = build();
-    if (drawer) drawer.classList.toggle("left", from === "left");
-    paintAuth();
     wrap.style.display = "";
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
@@ -143,13 +117,13 @@ export async function init(ctx) {
     menuBtn.addEventListener("click", (e) => {
       e.stopPropagation();
       if (sheet && sheet.style.display !== "none") closeMenu();
-      else openMenu("left");
+      else openMenu();
     });
   }
   if (moreBtn) {
     moreBtn.addEventListener("click", (e) => {
       e.stopPropagation();
-      openMenu("right");
+      openMenu();
     });
   }
 }
