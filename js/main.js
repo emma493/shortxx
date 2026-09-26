@@ -14,6 +14,7 @@ import { makeToast } from "./lib/dom.js";
 const FEATURES = [
   "player",
   "creator",
+  "creator-page",
   "auth",
   "likes",
   "follow",
