@@ -64,13 +64,21 @@ document.addEventListener("DOMContentLoaded", async () => {
     report("deeplink", e);
   }
 
-  // 1. Load videos first — feed is useless without data
-  try {
-    await loadVideosFromFirestore();
-  } catch (e) {
-    report("videos", e);
-  }
+  // 1. Wire up the UI FIRST so every button is clickable instantly,
+  // then fill in the videos in the background.
   publishIdentity();
+
+  const videosReady = () => window.dispatchEvent(new CustomEvent("sx:videos-ready"));
+  const load = (async () => {
+    try {
+      await loadVideosFromFirestore();
+    } catch (e) {
+      report("videos", e);
+    }
+    videosReady();
+  })();
+  // Safety net: if the network hangs, unblock the player attempt anyway.
+  setTimeout(videosReady, 12000);
 
   // 2. Load each feature in dependency order, isolated
   for (const name of FEATURES) {
@@ -86,6 +94,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       } catch (err) {}
     }
   }
+  await load;
 
   // Keep feed mode import referenced (deep links above use it)
   void getFeedMode;

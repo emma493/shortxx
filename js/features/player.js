@@ -14,7 +14,7 @@ export function getShareSource(videoEl) {
 
 export function playNextVideo(videoElement) {
   const videoData = getNextVideo();
-  if (!videoData || !videoElement) return;
+  if (!videoData || !videoElement) return null;
 
   const isLegacyString = typeof videoData === "string";
   currentVideoDirectUrl = isLegacyString ? videoData : videoData.url;
@@ -83,15 +83,26 @@ export function playNextVideo(videoElement) {
     videoElement.load();
     attemptPlay();
   }
+  return videoData;
 }
 
 export async function init(ctx) {
   const video = document.getElementById("main-video");
   if (!video) return;
-  playNextVideo(video);
-  store.current = ctx.getCurrentVideo ? ctx.getCurrentVideo() : null;
-  store.videoId = store.current && store.current.id ? store.current.id : null;
-  store.creator = store.current && store.current.creator ? store.current.creator : null;
-  store.linkedCreator = !!(store.current && store.current.creatorLinked && store.creator);
-  window.dispatchEvent(new CustomEvent("sx:video-changed"));
+  let played = false;
+  const attempt = () => {
+    if (played) return;
+    const data = playNextVideo(video);
+    if (!data) return;
+    played = true;
+    store.current = ctx.getCurrentVideo ? ctx.getCurrentVideo() : null;
+    store.videoId = store.current && store.current.id ? store.current.id : null;
+    store.creator = store.current && store.current.creator ? store.current.creator : null;
+    store.linkedCreator = !!(store.current && store.current.creatorLinked && store.creator);
+    window.dispatchEvent(new CustomEvent("sx:video-changed"));
+  };
+  // Videos may still be loading (UI wires up first) — play now if the pool
+  // is ready, otherwise play as soon as it arrives.
+  attempt();
+  window.addEventListener("sx:videos-ready", attempt);
 }
