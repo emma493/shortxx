@@ -37,7 +37,7 @@ export async function init(ctx) {
       '<nav><button class="sidebar-link active-link" data-go="home"><i class="fas fa-home"></i><span>Home</span></button>' +
       '<button class="sidebar-link" data-go="discover"><i class="fas fa-compass"></i><span>Discover</span></button>' +
       '<button class="sidebar-link" data-go="following"><i class="fas fa-user-check"></i><span>Following feed</span></button>' +
-      '<button class="sidebar-link" data-go="top"><i class="fas fa-fire"></i><span>Top videos</span></button>' +
+      '<button class="sidebar-link" data-go="trending"><i class="fas fa-fire"></i><span>Trending</span></button>' +
       '<button class="sidebar-link" data-go="saved"><i class="fas fa-bookmark"></i><span>Saved Videos</span></button>' +
       (isInstalled() ? "" : '<button class="sidebar-link" data-act="install"><i class="fas fa-download"></i><span>Install App</span></button>') +
       "</nav>" +
@@ -64,6 +64,7 @@ export async function init(ctx) {
         if (go === "home") location.href = "./index.html";
         else if (go === "discover") window.sxOpenDiscover && window.sxOpenDiscover("all");
         else if (go === "saved") window.sxOpenDiscover && window.sxOpenDiscover("saved");
+        else if (go === "trending") window.sxOpenTrending && window.sxOpenTrending("all");
         else if (go === "following" || go === "top") window.sxSwitchFeed && window.sxSwitchFeed(go);
       }),
     );

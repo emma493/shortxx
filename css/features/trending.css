@@ -1,0 +1,20 @@
+/* css/features/trending.css — full-page trending rank (Today / This week / All time). */
+.sx-trending { position: fixed; inset: 0; z-index: 940; display: none; background: #000; }
+.sx-trending-inner { width: 100%; height: 100%; max-width: 480px; margin: 0 auto; display: flex; flex-direction: column; background: #000; }
+@media (min-width: 768px) {
+  .sx-trending-inner { border-left: 1px solid rgba(255, 255, 255, 0.08); border-right: 1px solid rgba(255, 255, 255, 0.08); }
+}
+.sx-trending-bar { display: flex; align-items: center; gap: 4px; padding: calc(8px + env(safe-area-inset-top, 0px)) 8px 8px; border-bottom: 1px solid rgba(255, 255, 255, 0.08); }
+.sx-trending-back { background: none; border: none; color: #fff; font-size: 22px; padding: 8px 10px; cursor: pointer; min-width: 44px; min-height: 44px; }
+.sx-trending-title { color: #fff; font-size: 16px; font-weight: 800; flex: 1; text-align: center; display: flex; align-items: center; justify-content: center; gap: 6px; }
+.sx-trending-spacer { min-width: 44px; }
+.sx-trending-tabs { display: flex; border-bottom: 1px solid rgba(255, 255, 255, 0.08); }
+.sx-ttab { flex: 1; background: none; border: none; color: #8a8a8a; font-size: 13px; font-weight: 800; padding: 12px; cursor: pointer; }
+.sx-ttab.on { color: #fff; box-shadow: inset 0 -2px 0 #fe2c55; }
+.sx-trending-grid { flex: 1; overflow-y: auto; display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; padding: 2px 2px calc(12px + env(safe-area-inset-bottom, 0px)); align-content: start; }
+.sx-rank { position: relative; aspect-ratio: 3/4; background: #121212; border: none; padding: 0; cursor: pointer; overflow: hidden; }
+.sx-rank img { width: 100%; height: 100%; object-fit: cover; }
+.sx-rank-fallback { width: 100%; height: 100%; background: linear-gradient(135deg, #1e1e1e, #121212); display: flex; align-items: center; justify-content: center; color: #fe2c55; font-size: 24px; }
+.sx-rank-num { position: absolute; top: 4px; left: 6px; color: #fff; font-size: 20px; font-weight: 900; font-style: italic; text-shadow: 0 2px 6px rgba(0, 0, 0, 0.9); }
+.sx-rank-cap { position: absolute; left: 0; right: 0; bottom: 0; padding: 12px 6px 6px; background: linear-gradient(transparent, rgba(0, 0, 0, 0.8)); color: #fff; font-size: 11px; font-weight: 700; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sx-trending-empty { grid-column: 1/-1; color: #8a8a8a; font-size: 14px; text-align: center; padding: 32px 16px; line-height: 1.6; }

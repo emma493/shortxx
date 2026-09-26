@@ -23,6 +23,7 @@ const FEATURES = [
   "discover",
   "menu",
   "feed",
+  "trending",
   "mute",
   "share",
   "chrome",
