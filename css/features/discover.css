@@ -13,3 +13,14 @@
 .sx-tile-fallback { width: 100%; height: 100%; background: linear-gradient(135deg, #1e1e1e, #121212); display: flex; align-items: center; justify-content: center; color: #fe2c55; font-size: 28px; }
 .sx-tile-cap { position: absolute; left: 0; right: 0; bottom: 0; padding: 14px 6px 6px; background: linear-gradient(transparent, rgba(0,0,0,0.8)); color: #fff; font-size: 11px; font-weight: 700; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sx-discover-empty { grid-column: 1/-1; color: #8a8a8a; font-size: 14px; text-align: center; padding: 32px 0; }
+/* Hashtag cards (reference layout: cover + #name + count, horizontal scroll). */
+.sx-tags { padding: 0 0 4px; }
+.sx-tags-title { color: #fff; font-size: 14px; font-weight: 800; padding: 0 12px 8px; }
+.sx-tags-row { display: flex; gap: 10px; overflow-x: auto; padding: 0 12px 12px; scrollbar-width: none; }
+.sx-tags-row::-webkit-scrollbar { display: none; }
+.sx-tagcard { flex: none; width: 96px; background: #121212; border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; overflow: hidden; padding: 0; cursor: pointer; text-align: left; }
+.sx-tagcard.on { border-color: #fe2c55; }
+.sx-tagcard-img { width: 100%; height: 72px; object-fit: cover; display: block; background: #1e1e1e; }
+.sx-tagcard-fallback { width: 100%; height: 72px; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #1e1e1e, #121212); color: #fe2c55; font-size: 24px; font-weight: 800; }
+.sx-tagcard-name { display: block; color: #fff; font-size: 12px; font-weight: 800; padding: 8px 8px 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sx-tagcard-count { display: block; color: #8a8a8a; font-size: 11px; padding: 2px 8px 8px; }
