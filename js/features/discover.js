@@ -1,4 +1,4 @@
-import { formatCount, getAllVideos } from "../../vid.js";
+import { ensurePoolSize, formatCount, getAllVideos } from "../../vid.js";
 import { readJson, writeJson } from "../store.js";
 import { esc } from "../lib/dom.js";
 import { thumbHTML, hydrateThumbVideos, registerVideos } from "../lib/thumb.js";
@@ -423,6 +423,7 @@ export async function init(ctx) {
   function safePaint() {
     try {
       try { registerVideos(getAllVideos()); } catch (e) {}
+      try { void ensurePoolSize(48); } catch (e) {}
       paint();
       try {
         hydrateThumbVideos(sectionsEl);

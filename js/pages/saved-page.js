@@ -1,4 +1,4 @@
-import { formatCount, getAllVideos, loadVideosFromFirestore } from "../../vid.js";
+import { ensurePoolSize, formatCount, getAllVideos, loadVideosFromFirestore } from "../../vid.js";
 import { readJson, writeJson } from "../store.js";
 import { esc } from "../lib/dom.js";
 import { thumbHTML, hydrateThumbVideos } from "../lib/thumb.js";
@@ -24,6 +24,7 @@ function paint() {
   if (!grid) return;
   const saved = getSavedIds();
   const byId = new Map(getAllVideos().map((v) => [v.id, v]));
+  try { void ensurePoolSize(48); } catch (e) {}
   const ordered = [...saved].reverse().map((id) => byId.get(id)).filter(Boolean);
   grid.innerHTML = "";
   ordered.forEach((v) => {

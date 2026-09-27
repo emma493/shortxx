@@ -1,4 +1,4 @@
-import { formatCount, getAllVideos, loadVideosFromFirestore } from "../../vid.js";
+import { ensurePoolSize, formatCount, getAllVideos, loadVideosFromFirestore } from "../../vid.js";
 import { readJson, writeJson } from "../store.js";
 import { esc } from "../lib/dom.js";
 import { thumbHTML, hydrateThumbVideos, registerVideos } from "../lib/thumb.js";
@@ -161,6 +161,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   function paint() {
     try { registerVideos(getAllVideos()); } catch (e) {}
+    try { void ensurePoolSize(48); } catch (e) {}
     paintRecent();
     const q = (qEl.value || "").trim();
     if (!q) { resultsEl.style.display = "none"; paintSections(); try { hydrateThumbVideos(sectionsEl); } catch (e) {} }

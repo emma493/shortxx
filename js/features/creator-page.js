@@ -1,4 +1,4 @@
-import { formatCount, getAllVideos } from "../../vid.js";
+import { ensurePoolSize, formatCount, getAllVideos } from "../../vid.js";
 import { store, writeJson } from "../store.js";
 import { esc } from "../lib/dom.js";
 import { saveUserProfile } from "../../vid.js";
@@ -174,6 +174,7 @@ function paint(toast) {
   // Paint real first-frames for videos lacking poster_url.
   try {
     registerVideos(getAllVideos());
+    try { void ensurePoolSize(48); } catch (e) {}
   } catch (e) {}
   try {
     hydrateThumbVideos(bodyEl);

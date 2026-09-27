@@ -1,4 +1,4 @@
-import { formatCount, getAllVideos, loadVideosFromFirestore } from "../../vid.js";
+import { ensurePoolSize, formatCount, getAllVideos, loadVideosFromFirestore } from "../../vid.js";
 import { esc } from "../lib/dom.js";
 import { thumbHTML, hydrateThumbVideos, registerVideos } from "../lib/thumb.js";
 import { bootAuth } from "../lib/auth-boot.js";
@@ -24,6 +24,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   function paint() {
     try { registerVideos(getAllVideos()); } catch (e) {}
+    try { void ensurePoolSize(48); } catch (e) {}
     document.querySelectorAll("[data-metric]").forEach((b) => b.classList.toggle("on", b.getAttribute("data-metric") === metric));
     document.querySelectorAll("[data-window]").forEach((b) => b.classList.toggle("on", b.getAttribute("data-window") === windowKey));
     let pool = [...getAllVideos()];

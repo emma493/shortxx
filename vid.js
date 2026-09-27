@@ -100,12 +100,16 @@ let preloaderElement = null;
 // Append-only after boot: swipe windows are index-keyed, so existing
 // entries never move — new pages concatenate at the end.
 let allRawVideos = [];
-// Paged feed: the pool fills page by page (first page paints + plays
-// immediately, the rest stream in behind). PAGE_SIZE docs per request.
-const PAGE_SIZE = 25;
+// Paged feed: the pool fills one video at a time (first video paints +
+// plays immediately, the next is fetched as you watch). Single-doc pages
+// keep every request tiny on slow links. Grids bulk-fill via
+// ensurePoolSize below.
+const FIRST_PAGE_SIZE = 1;
+const MAX_PAGE_SIZE = 48;
 let pageCursor = null;
 let morePages = true;
 let pagingInFlight = false;
+let filling = false;
 
 /** True while further pages can still be fetched. */
 export function hasMoreVideos() {
@@ -129,13 +133,14 @@ function orderPage(newRaw) {
 }
 
 /** One raw page via the SDK (cursor null = first page). */
-async function fetchRawPage(cursor) {
+async function fetchRawPage(cursor, size) {
   const videosRef = collection(db, "videos");
-  // Bounded pages (perf): small JSON per request instead of the whole
-  // collection at once, so first paint never waits on 200 docs.
+  // Tiny pages: small JSON per request instead of the whole collection at
+  // once, so first paint never waits on hundreds of docs.
+  const lim = Math.min(Math.max(size || 1, 1), MAX_PAGE_SIZE);
   const q = cursor
-    ? query(videosRef, where("is_active", "==", true), startAfter(cursor), limit(PAGE_SIZE))
-    : query(videosRef, where("is_active", "==", true), limit(PAGE_SIZE));
+    ? query(videosRef, where("is_active", "==", true), startAfter(cursor), limit(lim))
+    : query(videosRef, where("is_active", "==", true), limit(lim));
   const snap = await getDocs(q);
   const raw = [];
   snap.forEach((docSnap) => {
@@ -143,7 +148,7 @@ async function fetchRawPage(cursor) {
     if (v) raw.push(v);
   });
   const docs = snap.docs || [];
-  return { raw, lastDoc: docs.length ? docs[docs.length - 1] : null, exhausted: docs.length < PAGE_SIZE };
+  return { raw, lastDoc: docs.length ? docs[docs.length - 1] : null, exhausted: docs.length < lim };
 }
 // Load-state tracking: lets the boot sequence tell "still loading" apart
 // from "failed", retry a hung request, and surface the real cause instead
@@ -474,7 +479,7 @@ export async function loadVideosFromFirestore() {
     // Creator directory first (best-effort) so names/avatars resolve below.
     await loadCreators();
 
-    const first = await fetchRawPage(null);
+    const first = await fetchRawPage(null, FIRST_PAGE_SIZE);
     pageCursor = first.lastDoc;
     morePages = !first.exhausted;
 
@@ -534,25 +539,29 @@ export async function loadVideosFromFirestore() {
 }
 
 /**
- * Fetches the next page and appends it to the live pool (scroll-triggered).
- * Existing indices never move; grids + swipe extend via sx:videos-ready.
- * Returns the pool size. No-op while a fetch is in flight or exhausted.
+ * Fetches the next page (default: exactly 1 video) and appends it to the
+ * live pool — steady state is 1 playing + 1 fetched ahead. Existing indices
+ * never move; grids + swipe extend via sx:videos-ready. Returns pool size.
+ * No-op while a fetch is in flight or exhausted. Pages fully filtered out
+ * (e.g. Following with no match) auto-advance to the next page.
  */
-export async function requestMoreVideos() {
+export async function requestMoreVideos(count = 1) {
   if (!morePages || pagingInFlight) return getVideoCount();
   pagingInFlight = true;
   try {
-    const page = await fetchRawPage(pageCursor);
-    pageCursor = page.lastDoc || pageCursor;
-    if (page.exhausted) morePages = false;
-    if (page.raw.length) {
-      allRawVideos = [...allRawVideos, ...page.raw];
-      fetchedVideos = [...fetchedVideos, ...orderPage(page.raw)];
-      try {
-        window.dispatchEvent(new CustomEvent("sx:videos-ready"));
-      } catch (e) {}
-    } else if (page.exhausted) {
-      morePages = false;
+    for (let attempt = 0; attempt < 10; attempt++) {
+      const page = await fetchRawPage(pageCursor, count);
+      pageCursor = page.lastDoc || pageCursor;
+      if (page.exhausted) morePages = false;
+      if (page.raw.length) {
+        allRawVideos = [...allRawVideos, ...page.raw];
+        fetchedVideos = [...fetchedVideos, ...orderPage(page.raw)];
+        try {
+          window.dispatchEvent(new CustomEvent("sx:videos-ready"));
+        } catch (e) {}
+        return getVideoCount();
+      }
+      if (!morePages) break;
     }
     return getVideoCount();
   } catch (e) {
@@ -560,6 +569,24 @@ export async function requestMoreVideos() {
   } finally {
     pagingInFlight = false;
   }
+}
+
+/**
+ * Bulk-fill for grids (Discover/Trending/Saved/Liked/Creators): pages up
+ * until the pool holds n videos or the collection is exhausted. Single
+ * runner at a time; fire-and-forget from paint code.
+ */
+export async function ensurePoolSize(n) {
+  if (filling) return getVideoCount();
+  filling = true;
+  try {
+    while (morePages && getVideoCount() < n) {
+      await requestMoreVideos(Math.min(MAX_PAGE_SIZE, n - getVideoCount()));
+    }
+  } catch (e) {} finally {
+    filling = false;
+  }
+  return getVideoCount();
 }
 
 /**

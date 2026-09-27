@@ -1,4 +1,4 @@
-import { creatorFor, formatCount, getAllVideos, loadVideosFromFirestore } from "../../vid.js";
+import { creatorFor, ensurePoolSize, formatCount, getAllVideos, loadVideosFromFirestore } from "../../vid.js";
 import { readJson, writeJson } from "../store.js";
 import { esc } from "../lib/dom.js";
 import { thumbHTML, hydrateThumbVideos, registerVideos } from "../lib/thumb.js";
@@ -117,6 +117,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   function paint() {
     try {
     try { registerVideos(getAllVideos()); } catch (e) {}
+    try { void ensurePoolSize(48); } catch (e) {}
     const list = videosOf(name).sort((a, b) => (b.createdAtMillis || 0) - (a.createdAtMillis || 0));
     const current = list[0] || null;
     const views = list.reduce((s, v) => s + (v.views || 0), 0);

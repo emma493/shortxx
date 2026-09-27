@@ -1,4 +1,4 @@
-import { formatCount, getAllVideos, loadVideosFromFirestore } from "../../vid.js";
+import { ensurePoolSize, formatCount, getAllVideos, loadVideosFromFirestore } from "../../vid.js";
 import { readJson, writeJson } from "../store.js";
 import { esc } from "../lib/dom.js";
 import { thumbHTML, hydrateThumbVideos, registerVideos } from "../lib/thumb.js";
@@ -25,6 +25,7 @@ function paint() {
   const clearBtn = document.querySelector("[data-clear]");
   if (!grid) return;
   try { registerVideos(getAllVideos()); } catch (e) {}
+  try { void ensurePoolSize(48); } catch (e) {}
   const liked = getLikedIds();
   const byId = new Map(getAllVideos().map((v) => [v.id, v]));
   const ordered = [...liked].reverse().map((id) => byId.get(id)).filter(Boolean);

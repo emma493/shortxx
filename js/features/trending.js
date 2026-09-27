@@ -1,4 +1,4 @@
-import { formatCount, getAllVideos } from "../../vid.js";
+import { ensurePoolSize, formatCount, getAllVideos } from "../../vid.js";
 import { esc } from "../lib/dom.js";
 import { thumbHTML, hydrateThumbVideos, registerVideos } from "../lib/thumb.js";
 import { attachMenuClone } from "../lib/side-menu.js";
@@ -121,6 +121,7 @@ function paintGrid() {
 function safePaint() {
   try {
     try { registerVideos(getAllVideos()); } catch (e) {}
+    try { void ensurePoolSize(48); } catch (e) {}
     paintPills();
     paintGrid();
     try { hydrateThumbVideos(gridEl); } catch (e) {}

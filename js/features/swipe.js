@@ -124,10 +124,10 @@ function setActive(poolIdx) {
   const list = pool();
   if (!list.length) return;
   const idx = wrapIndex(poolIdx, list.length);
-  // Near the tail with more pages behind: pull the next page now so
-  // scrolling never hits a wall. One fetch plays while it loads.
+  // One-at-a-time: on the last loaded video with more behind, fetch
+  // exactly 1 next. Steady state is 1 playing + 1 fetched ahead.
   try {
-    if (hasMoreVideos() && idx >= list.length - 3) void requestMoreVideos();
+    if (hasMoreVideos() && idx >= list.length - 1) void requestMoreVideos(1);
   } catch (e) {}
   const sec = windowMap.get(idx);
   const data = list[idx];
