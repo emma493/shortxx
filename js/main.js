@@ -26,7 +26,6 @@ const FEATURES = [
   "creator-page",
   "guide",
   "prefs",
-  "auth",
   "telemetry",
   "likes",
   "follow",
@@ -151,6 +150,46 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
     } catch (e) {}
   }, 12000);
+
+  // Auth loads ON DEMAND (first login/signup tap), never at boot: its
+  // firebase-auth chunk is the heaviest import and login is guest-optional.
+  // Stubs forward to the real handlers once loaded.
+  let authPromise = null;
+  function loadAuthOnce() {
+    if (!authPromise) {
+      authPromise = (async () => {
+        const mod = await import("./features/auth.js");
+        if (mod && typeof mod.init === "function") await mod.init(ctx);
+      })().catch((e) => {
+        authPromise = null;
+        report("auth", e);
+        throw e;
+      });
+    }
+    return authPromise;
+  }
+  const authEntryStub = async (...args) => {
+    try {
+      await loadAuthOnce();
+    } catch (e) {
+      toast("Login unavailable — check your connection");
+      return;
+    }
+    const real = window.sxAuthEntry;
+    if (typeof real === "function" && real !== authEntryStub) return real(...args);
+  };
+  const authOpenStub = async (...args) => {
+    try {
+      await loadAuthOnce();
+    } catch (e) {
+      toast("Login unavailable — check your connection");
+      return;
+    }
+    const real = window.sxOpenAuth;
+    if (typeof real === "function" && real !== authOpenStub) return real(...args);
+  };
+  window.sxAuthEntry = authEntryStub;
+  window.sxOpenAuth = authOpenStub;
 
   // 2. Critical path FIRST: player + swipe wire synchronously so video
   // plays even if the parallel fan-out below stalls (slow CDN/radio).
