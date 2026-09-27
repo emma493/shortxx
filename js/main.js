@@ -167,18 +167,35 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // 3. Load ALL remaining features in parallel — order-independent by design
   // (they sync via store + sx:* window events, never direct imports).
-  const results = await Promise.allSettled(
-    FEATURES.map(async (name) => {
-      const mod = await withTimeout(
-        import("./features/" + name + ".js"),
-        FEATURE_TIMEOUT_MS,
-        name,
-      );
-      if (mod && typeof mod.init === "function") {
-        await withTimeout(Promise.resolve().then(() => mod.init(ctx)), FEATURE_TIMEOUT_MS, name + ":init");
+  const loadFeature = async (name) => {
+    const mod = await withTimeout(
+      import("./features/" + name + ".js"),
+      FEATURE_TIMEOUT_MS,
+      name,
+    );
+    if (mod && typeof mod.init === "function") {
+      await withTimeout(Promise.resolve().then(() => mod.init(ctx)), FEATURE_TIMEOUT_MS, name + ":init");
+    }
+  };
+  // Two passes: stragglers on a slow link get a second chance instead of
+  // staying dead for the whole session. Only import-stage timeouts retry
+  // (re-running a half-finished init could double-wire UI); only
+  // double-failures toast.
+  let results = await Promise.allSettled(FEATURES.map(loadFeature));
+  const failedOnce = FEATURES.filter((name, i) => {
+    if (results[i].status !== "rejected") return false;
+    const msg = String((results[i].reason && results[i].reason.message) || results[i].reason || "");
+    return !/:init$/.test(msg);
+  });
+  if (failedOnce.length) {
+    const retry = await Promise.allSettled(failedOnce.map(loadFeature));
+    retry.forEach((r, k) => {
+      if (r.status === "fulfilled") {
+        const i = FEATURES.indexOf(failedOnce[k]);
+        if (i >= 0) results[i] = r;
       }
-    }),
-  );
+    });
+  }
   results.forEach((r, i) => {
     if (r.status === "rejected") {
       report(FEATURES[i], r.reason);

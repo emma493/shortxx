@@ -362,13 +362,16 @@ const restNum = (f) => {
  */
 async function loadVideosViaRest() {
   const ctrl = new AbortController();
-  const timer = setTimeout(() => { try { ctrl.abort(); } catch (e) {} }, 15000);
+  const timer = setTimeout(() => { try { ctrl.abort(); } catch (e) {} }, 45000);
   try {
     const url =
       "https://firestore.googleapis.com/v1/projects/" + firebaseConfig.projectId +
       "/databases/(default)/documents/videos?pageSize=200&key=" + firebaseConfig.apiKey;
     const res = await fetch(url, { signal: ctrl.signal });
-    if (!res || !res.ok) return [];
+    if (!res || !res.ok) {
+      console.warn("[shortxx] REST fallback HTTP " + (res ? res.status : "no-response"));
+      return [];
+    }
     const json = await res.json();
     const docs = json && Array.isArray(json.documents) ? json.documents : [];
     const out = [];
@@ -397,6 +400,7 @@ async function loadVideosViaRest() {
     }
     return out;
   } catch (e) {
+    console.warn("[shortxx] REST fallback failed:", String((e && e.message) || e));
     return [];
   } finally {
     clearTimeout(timer);
