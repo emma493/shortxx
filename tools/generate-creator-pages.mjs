@@ -72,6 +72,10 @@ function bake(template, name) {
     '<script type="application/ld+json" data-profile-json>{"@context":"https://schema.org","@type":"Person","name":"Shortxx creator","url":"https://shortxx.live/creators"}</script>',
     `<script type="application/ld+json" data-profile-json>{"@context":"https://schema.org","@type":"Person","name":"${name}","alternateName":"@${name}","url":"${url}"}</script>`
   );
+  out = out.replace(
+    '<h1 class="cp-name" data-profile-h1>Creator | Shortxx</h1>',
+    `<h1 class="cp-name" data-profile-h1>@${name}</h1>`
+  );
   return out;
 }
 
