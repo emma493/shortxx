@@ -1,6 +1,6 @@
 import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
 import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-analytics.js";
-import { getFirestore, collection, getDocs, query, where, limit, doc, getDoc, setDoc, updateDoc, increment, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+import { getFirestore, initializeFirestore, collection, getDocs, query, where, limit, doc, getDoc, setDoc, updateDoc, increment, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 
 // Firebase Configuration (project: shortxx-live)
 const firebaseConfig = {
@@ -24,8 +24,16 @@ try {
   console.warn("Analytics init skipped:", e);
 }
 
-// Default Firestore database instance
-const db = getFirestore(app);
+// Default Firestore database instance. Auto-detect long polling so networks
+// that kill the SDK's persistent stream (proxies, firewalls, adblockers)
+// transparently fall back to plain request/response instead of going
+// "offline". Falls back to stock init if the option is ever unsupported.
+let db;
+try {
+  db = initializeFirestore(app, { experimentalAutoDetectLongPolling: true });
+} catch (e) {
+  db = getFirestore(app);
+}
 
 /** Shared Firebase app instance (powers Firebase Auth in script.js). */
 export function getFirebaseApp() {
