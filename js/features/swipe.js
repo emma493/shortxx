@@ -38,8 +38,8 @@ function posterHTML(v) {
   if (thumb) {
     return '<img src="' + esc(thumb) + '" alt="" loading="lazy" decoding="async" style="width:100%;height:100%;object-fit:cover;display:block;">';
   }
-  const initial = ((v.creator || "?") + "").slice(0, 1).toUpperCase();
-  return '<div aria-hidden="true" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:#0a0a0a;color:#3a3a3a;font-size:64px;font-weight:800;">' + esc(initial) + "</div>";
+  // Plain black backdrop while the video loads — no letter avatars.
+  return '<div aria-hidden="true" style="width:100%;height:100%;background:#000;"></div>';
 }
 
 function sectionEl(poolIdx, v) {

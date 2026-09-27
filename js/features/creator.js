@@ -10,10 +10,12 @@ const SMARTLINK_URL = "https://www.profitableratecpmnetwork.com/hdw3m5up?key=5bd
  * Caption/hashtags come from Firestore (vid.js) and show for every video,
  * even unlinked ones — they describe the video, not the creator. */
 
-function showInitial(avatarEl, initialEl, letter) {
+function showInitial(avatarEl, initialEl) {
   if (avatarEl) avatarEl.style.display = "none";
+  // Neutral dark dot while the avatar loads — no letter avatars.
   if (initialEl) {
-    initialEl.textContent = (letter || "?").slice(0, 1).toUpperCase();
+    initialEl.textContent = "";
+    initialEl.style.background = "#1e1e1e";
     initialEl.style.display = "flex";
   }
 }
@@ -95,12 +97,12 @@ export async function init() {
     if (linkedCreator) {
       if (userNameElement) userNameElement.textContent = creator;
       if (current && current.avatarUrl && avatarEl) {
-        avatarEl.onerror = () => showInitial(avatarEl, avatarInitial, creator);
+        avatarEl.onerror = () => showInitial(avatarEl, avatarInitial);
         avatarEl.src = current.avatarUrl;
         avatarEl.style.display = "";
         if (avatarInitial) avatarInitial.style.display = "none";
       } else {
-        showInitial(avatarEl, avatarInitial, creator);
+        showInitial(avatarEl, avatarInitial);
       }
     }
     if (likeCountEl) likeCountEl.textContent = formatCount(current ? current.likes : 0);
