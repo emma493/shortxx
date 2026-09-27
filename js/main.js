@@ -3,6 +3,9 @@ import {
   getCurrentVideo,
   getFeedMode,
   setFeedMode,
+  didVideosLoad,
+  getLastLoadError,
+  getVideoCount,
 } from "../vid.js";
 import { store, publishIdentity } from "./store.js";
 import { makeToast } from "./lib/dom.js";
@@ -111,8 +114,40 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
     videosReady();
   })();
-  // Safety net: if the network hangs, unblock the player attempt anyway.
-  setTimeout(videosReady, 12000);
+  // Manual retry (feed button / error UI): reload pool, rebuild on success.
+  window.sxRetryVideos = async () => {
+    try {
+      await loadVideosFromFirestore();
+    } catch (e) {
+      report("videos-retry", e);
+    }
+    videosReady();
+  };
+  // Surface load failures in plain language instead of a silent black feed.
+  window.addEventListener("sx:videos-error", (ev) => {
+    try {
+      const msg = String((ev && ev.detail && ev.detail.message) || "");
+      if (/permission|denied/i.test(msg)) {
+        toast("Database blocked access — check Firestore rules");
+      } else if (/unavailable|network|failed to get|failed to fetch|timeout/i.test(msg)) {
+        toast("Can't reach database — check connection or adblocker");
+      } else {
+        toast("Video load failed — reopen the app to retry");
+      }
+    } catch (e) {}
+  });
+  // Safety net: if the network hangs, retry once instead of stranding the
+  // feed. Late success self-heals via sx:videos-ready (swipe rebuilds).
+  setTimeout(async () => {
+    try {
+      if (didVideosLoad() && getVideoCount() > 0) return;
+      const err = getLastLoadError();
+      if (!didVideosLoad() || (err && getVideoCount() === 0)) {
+        toast("Still connecting to database…");
+        await window.sxRetryVideos();
+      }
+    } catch (e) {}
+  }, 12000);
 
   // 2. Load ALL features in parallel — order-independent by design
   // (they sync via store + sx:* window events, never direct imports).

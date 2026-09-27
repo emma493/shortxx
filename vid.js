@@ -90,6 +90,21 @@ let currentVideo = null;
 let preloaderElement = null;
 // Unfiltered pool (preference + feed-mode ordering derive from this).
 let allRawVideos = [];
+// Load-state tracking: lets the boot sequence tell "still loading" apart
+// from "failed", retry a hung request, and surface the real cause instead
+// of a silent black feed.
+let loadSettled = false;
+let lastLoadError = null;
+
+/** True once the initial Firestore load resolved (success or failure). */
+export function didVideosLoad() {
+  return loadSettled;
+}
+
+/** Last load failure (Error or null). Null after any success. */
+export function getLastLoadError() {
+  return lastLoadError;
+}
 
 // Content preference: which creators' videos may enter the pool.
 // 'all' = Girls + Couples mix. Persisted as shortxx_pref, default 'all'.
@@ -366,9 +381,18 @@ export async function loadVideosFromFirestore() {
     } catch (e) { /* storage blocked: ignore */ }
 
     preloadNextVideo();
+    loadSettled = true;
+    lastLoadError = null;
     return fetchedVideos;
   } catch (error) {
     console.error("Error fetching videos from Firestore:", error);
+    loadSettled = true;
+    lastLoadError = error instanceof Error ? error : new Error(String(error));
+    // Surface the cause to the boot sequence (toast + retry UI) instead
+    // of failing silently with an empty pool.
+    try {
+      window.dispatchEvent(new CustomEvent("sx:videos-error", { detail: { message: String((error && error.message) || error) } }));
+    } catch (e) {}
     return [];
   }
 }
