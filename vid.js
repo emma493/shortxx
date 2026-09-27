@@ -476,10 +476,25 @@ export async function loadVideosFromFirestore() {
   pageCursor = null;
   morePages = true;
   try {
-    // Creator directory first (best-effort) so names/avatars resolve below.
-    await loadCreators();
+    // Creator directory is best-effort: never let it block videos. A hung
+    // creators query (offline SDK) loses the race after 8s and videos
+    // proceed with stable pseudonyms.
+    await Promise.race([
+      loadCreators(),
+      new Promise((resolve) => setTimeout(resolve, 8000)),
+    ]);
 
-    const first = await fetchRawPage(null, FIRST_PAGE_SIZE);
+    // Same guard for the videos query itself: a hung SDK request must not
+    // wedge the boot — time out into the REST fallback below.
+    let first;
+    try {
+      first = await Promise.race([
+        fetchRawPage(null, FIRST_PAGE_SIZE),
+        new Promise((_, reject) => setTimeout(() => reject(new Error("sdk-timeout")), 20000)),
+      ]);
+    } catch (e) {
+      first = { raw: [], lastDoc: null, exhausted: true };
+    }
     pageCursor = first.lastDoc;
     morePages = !first.exhausted;
 
@@ -491,7 +506,10 @@ export async function loadVideosFromFirestore() {
     if (rawVideos.length === 0) {
       try {
         rawVideos = await loadVideosViaRest();
-        if (rawVideos.length) morePages = false;
+        if (rawVideos.length) {
+          morePages = false;
+          console.info("[shortxx] videos via REST fallback: " + rawVideos.length);
+        }
       } catch (e) {}
     }
 
