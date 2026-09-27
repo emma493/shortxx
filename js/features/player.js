@@ -181,9 +181,26 @@ export async function init(ctx) {
   video.addEventListener("ended", () => {
     noteComplete();
   });
-  // TikTok-style loader lifecycle: visible while getting ready or stalled,
-  // gone the moment frames render.
-  video.addEventListener("playing", hideLoader);
+  // Dead-URL resilience: a video whose source fails (socket error, 404,
+  // expired CDN link) must never strand the feed on black. Skip to the
+  // next video; give up with a message after several consecutive failures.
+  let errSkips = 0;
+  const toast = (ctx && ctx.toast) || (() => {});
+  video.addEventListener("playing", () => { errSkips = 0; hideLoader(); });
+  video.addEventListener("error", () => {
+    try {
+      errSkips++;
+      if (errSkips > 5) {
+        errSkips = 0;
+        hideLoader();
+        toast("Videos won't load — check your connection");
+        return;
+      }
+      const next = playNextVideo(video);
+      if (next) activateVideo(next);
+      else { hideLoader(); toast("Videos won't load — check your connection"); }
+    } catch (e) {}
+  });
   video.addEventListener("canplay", hideLoader);
   video.addEventListener("waiting", showLoader);
   video.addEventListener("loadstart", showLoader);
