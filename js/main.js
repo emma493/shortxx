@@ -59,7 +59,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   const toast = makeToast();
   const ctx = { toast, getCurrentVideo, store };
 
-  // 0. PWA shortcut deep links (?feed=...) — same behavior as before split
+  // 0. PWA shortcut deep links (?feed=...) — same behavior as before split.
+  // Declared outside try: read again after features boot below.
+  let wantsPrefs = false;
   try {
     const params = new URLSearchParams(location.search);
     const deepFeed = params.get("feed");
@@ -84,7 +86,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
     // Side-menu Preferences from folder pages (?prefs=1): strip the param
     // now, open the popup after features boot below.
-    let wantsPrefs = false;
     if (deepPrefs === "1") {
       wantsPrefs = true;
       try {

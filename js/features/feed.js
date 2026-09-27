@@ -90,7 +90,8 @@ export async function init(ctx) {
     }, 0);
   };
 
-  // First-visit flow (guide.js) opens the menu after the tutorial dismisses.
+  // Feed menu opens only on manual tap of the feed button (For You is
+  // already the default — nothing auto-opens on first visit).
   window.sxOpenFeedMenu = openMenu;
   window.sxCloseFeedMenu = closeMenu;
 

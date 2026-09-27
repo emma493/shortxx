@@ -71,7 +71,7 @@ function close() {
   setTimeout(() => {
     if (root) root.style.display = "none";
   }, 260);
-  // First-visit sequence: prefs -> tutorial (guide.js) -> feed menu.
+  // First-visit sequence: prefs -> tutorial (guide.js) -> For You feed.
   try {
     window.dispatchEvent(new CustomEvent("sx:prefs-closed"));
   } catch (e) {}

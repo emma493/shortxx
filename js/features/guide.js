@@ -6,8 +6,8 @@
  * never re-prompted. Storage access is guarded: sandboxed WebViews that
  * throw on localStorage simply show the overlay per visit.
  *
- * First-visit sequence: prefs popup -> tutorial -> feed menu slides from
- * below (window.sxOpenFeedMenu). The tutorial waits for the prefs popup to
+ * First-visit sequence: prefs popup -> tutorial -> straight into the
+ * For You feed (the default). The tutorial waits for the prefs popup to
  * close instead of firing on a blind timer, so the two never overlap. */
 
 const FLAG = "hasSeenSwipeTutorial";
@@ -50,10 +50,8 @@ export async function init() {
     overlay.classList.remove("active");
     clearTimeout(timer);
     markSeen();
-    // Sequence finale: reveal the feed menu sliding from below.
-    try {
-      if (window.sxOpenFeedMenu) window.sxOpenFeedMenu();
-    } catch (e) {}
+    // Feed already defaults to For You — no forced menu; the user can
+    // switch via the feed button whenever they want.
   };
 
   const show = () => {
