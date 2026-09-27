@@ -1,6 +1,6 @@
 import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
 import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-analytics.js";
-import { getFirestore, initializeFirestore, collection, getDocs, query, where, limit, doc, getDoc, setDoc, updateDoc, increment, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+import { getFirestore, initializeFirestore, collection, getDocs, query, where, limit, startAfter, doc, getDoc, setDoc, updateDoc, increment, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 
 // Firebase Configuration (project: shortxx-live)
 const firebaseConfig = {
@@ -97,7 +97,54 @@ let currentVideoIndex = 0;
 let currentVideo = null;
 let preloaderElement = null;
 // Unfiltered pool (preference + feed-mode ordering derive from this).
+// Append-only after boot: swipe windows are index-keyed, so existing
+// entries never move — new pages concatenate at the end.
 let allRawVideos = [];
+// Paged feed: the pool fills page by page (first page paints + plays
+// immediately, the rest stream in behind). PAGE_SIZE docs per request.
+const PAGE_SIZE = 25;
+let pageCursor = null;
+let morePages = true;
+let pagingInFlight = false;
+
+/** True while further pages can still be fetched. */
+export function hasMoreVideos() {
+  return morePages;
+}
+
+/** Orders ONLY new arrivals per current mode/pref (never reshuffles the
+ *  live pool — swipe windows are index-keyed and must stay stable). */
+function orderPage(newRaw) {
+  const scoped = applyPreference(newRaw);
+  const mode = getFeedMode();
+  if (mode === "top") {
+    return [...scoped].sort((a, b) => (b.views || 0) - (a.views || 0));
+  }
+  if (mode === "following") {
+    const follows = readFollows();
+    const filtered = scoped.filter((v) => follows.includes(v.creator));
+    return filtered.length > 0 ? filtered : [...scoped];
+  }
+  return shuffleArray([...scoped]);
+}
+
+/** One raw page via the SDK (cursor null = first page). */
+async function fetchRawPage(cursor) {
+  const videosRef = collection(db, "videos");
+  // Bounded pages (perf): small JSON per request instead of the whole
+  // collection at once, so first paint never waits on 200 docs.
+  const q = cursor
+    ? query(videosRef, where("is_active", "==", true), startAfter(cursor), limit(PAGE_SIZE))
+    : query(videosRef, where("is_active", "==", true), limit(PAGE_SIZE));
+  const snap = await getDocs(q);
+  const raw = [];
+  snap.forEach((docSnap) => {
+    const v = toVideoObject(docSnap.id, docSnap.data());
+    if (v) raw.push(v);
+  });
+  const docs = snap.docs || [];
+  return { raw, lastDoc: docs.length ? docs[docs.length - 1] : null, exhausted: docs.length < PAGE_SIZE };
+}
 // Load-state tracking: lets the boot sequence tell "still loading" apart
 // from "failed", retry a hung request, and surface the real cause instead
 // of a silent black feed.
@@ -420,29 +467,26 @@ async function loadVideosViaRest() {
  * orders them per the active feed mode.
  */
 export async function loadVideosFromFirestore() {
+  // Fresh pool (boot, feed switch, retry): reset paging, load page one.
+  pageCursor = null;
+  morePages = true;
   try {
-    const videosRef = collection(db, "videos");
-    // Bounded pool (perf): grids + shuffle sample from up to 200 active
-    // videos (arbitrary subset — no orderBy — instead of the whole
-    // collection). Grid pages paginate client-side over this pool
-    // (48-chunk "Show more").
-    const q = query(videosRef, where("is_active", "==", true), limit(200));
-    const querySnapshot = await getDocs(q);
-
     // Creator directory first (best-effort) so names/avatars resolve below.
     await loadCreators();
 
-    let rawVideos = [];
-    querySnapshot.forEach((docSnap) => {
-      const v = toVideoObject(docSnap.id, docSnap.data());
-      if (v) rawVideos.push(v);
-    });
+    const first = await fetchRawPage(null);
+    pageCursor = first.lastDoc;
+    morePages = !first.exhausted;
+
+    let rawVideos = first.raw;
 
     // SDK yielded nothing (offline mode / blocked stream): one plain-HTTPS
-    // attempt before giving up. No-op cost on the normal path.
+    // attempt before giving up. REST returns the full set, so paging ends.
+    // No-op cost on the normal path.
     if (rawVideos.length === 0) {
       try {
         rawVideos = await loadVideosViaRest();
+        if (rawVideos.length) morePages = false;
       } catch (e) {}
     }
 
@@ -486,6 +530,35 @@ export async function loadVideosFromFirestore() {
       window.dispatchEvent(new CustomEvent("sx:videos-error", { detail: { message: String((error && error.message) || error) } }));
     } catch (e) {}
     return [];
+  }
+}
+
+/**
+ * Fetches the next page and appends it to the live pool (scroll-triggered).
+ * Existing indices never move; grids + swipe extend via sx:videos-ready.
+ * Returns the pool size. No-op while a fetch is in flight or exhausted.
+ */
+export async function requestMoreVideos() {
+  if (!morePages || pagingInFlight) return getVideoCount();
+  pagingInFlight = true;
+  try {
+    const page = await fetchRawPage(pageCursor);
+    pageCursor = page.lastDoc || pageCursor;
+    if (page.exhausted) morePages = false;
+    if (page.raw.length) {
+      allRawVideos = [...allRawVideos, ...page.raw];
+      fetchedVideos = [...fetchedVideos, ...orderPage(page.raw)];
+      try {
+        window.dispatchEvent(new CustomEvent("sx:videos-ready"));
+      } catch (e) {}
+    } else if (page.exhausted) {
+      morePages = false;
+    }
+    return getVideoCount();
+  } catch (e) {
+    return getVideoCount();
+  } finally {
+    pagingInFlight = false;
   }
 }
 

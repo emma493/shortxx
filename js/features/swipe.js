@@ -1,4 +1,4 @@
-import { getAllVideos } from "../../vid.js";
+import { getAllVideos, requestMoreVideos, hasMoreVideos } from "../../vid.js";
 import { esc } from "../lib/dom.js";
 import { getCachedThumb } from "../lib/thumb.js";
 import { activateVideo, playVideoAt } from "./player.js";
@@ -21,6 +21,9 @@ let mainVideo = null;
 let observer = null;
 let booted = false;
 let activePoolIndex = 0;
+// Last pool size seen: growth (paged appends) extends the window in place,
+// only shrink/first-boot rebuilds (rebuilds replay + jump scroll).
+let lastPoolSize = 0;
 // poolIdx -> section element for the current window
 let windowMap = new Map();
 
@@ -121,6 +124,11 @@ function setActive(poolIdx) {
   const list = pool();
   if (!list.length) return;
   const idx = wrapIndex(poolIdx, list.length);
+  // Near the tail with more pages behind: pull the next page now so
+  // scrolling never hits a wall. One fetch plays while it loads.
+  try {
+    if (hasMoreVideos() && idx >= list.length - 3) void requestMoreVideos();
+  } catch (e) {}
   const sec = windowMap.get(idx);
   const data = list[idx];
   if (!sec || !data) {
@@ -216,6 +224,7 @@ function boot() {
   // Activate synchronously so first paint has video + rail even if the
   // observer hasn't fired yet; later IO events no-op via the setActive guard.
   setActive(activePoolIndex);
+  lastPoolSize = pool().length;
 }
 
 /* Feed-mode switch without reload: rebuild pool window around the same
@@ -243,6 +252,7 @@ window.sxReseedFeed = function () {
     ensureWindow(activePoolIndex);
     scrollToActive(true);
     setActive(activePoolIndex);
+    lastPoolSize = pool().length;
   } catch (e) {}
 };
 
@@ -276,9 +286,9 @@ export async function init() {
   boot();
   window.addEventListener("sx:videos-ready", () => {
     try {
-      if (!booted) boot();
-      else {
-        // Late-arriving pool (first load): rebuild around start.
+      const n = pool().length;
+      if (!booted || n < lastPoolSize) {
+        // First boot or pool reset (feed switch): full rebuild.
         booted = false;
         window.sxSwipeBooted = false;
         windowMap.forEach((el) => {
@@ -287,6 +297,10 @@ export async function init() {
         });
         windowMap = new Map();
         boot();
+      } else if (n > lastPoolSize) {
+        // Paged append: extend the window in place, no replay/scroll jump.
+        lastPoolSize = n;
+        ensureWindow(activePoolIndex);
       }
     } catch (e) {}
   });
