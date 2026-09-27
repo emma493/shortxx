@@ -9,15 +9,18 @@ import {
 } from "../vid.js";
 import { store, publishIdentity } from "./store.js";
 import { makeToast } from "./lib/dom.js";
+// Critical path is static (like the old single-script app): player + swipe
+// wire FIRST and play even if every other feature stalls below.
+import { init as initPlayer } from "./features/player.js";
+import { init as initSwipe } from "./features/swipe.js";
 
-/* js/main.js — isolated bootstrap. Each feature loads via dynamic
- * import() IN PARALLEL with its own timeout + try/catch, so one slow
- * CDN (e.g. firebase-auth) or broken feature never blocks the rest —
- * every button wires up even on a bad network. */
+/* js/main.js — isolated bootstrap. Player + swipe (the critical path) are
+ * static imports wired FIRST so video plays even on a bad network; every
+ * other feature loads via dynamic import() IN PARALLEL with its own
+ * timeout + try/catch, so one slow CDN or broken feature never blocks
+ * the rest. */
 
 const FEATURES = [
-  "player",
-  "swipe",
   "ads",
   "creator",
   "creator-page",
@@ -42,7 +45,7 @@ const FEATURES = [
 ];
 
 // Slow networks must not serialize-block the UI: cap each feature.
-const FEATURE_TIMEOUT_MS = 10000;
+const FEATURE_TIMEOUT_MS = 30000;
 
 function report(feature, err) {
   console.warn("[shortxx] feature failed: " + feature, err);
@@ -149,7 +152,20 @@ document.addEventListener("DOMContentLoaded", async () => {
     } catch (e) {}
   }, 12000);
 
-  // 2. Load ALL features in parallel — order-independent by design
+  // 2. Critical path FIRST: player + swipe wire synchronously so video
+  // plays even if the parallel fan-out below stalls (slow CDN/radio).
+  try {
+    await initPlayer(ctx);
+  } catch (e) {
+    report("player", e);
+  }
+  try {
+    await initSwipe();
+  } catch (e) {
+    report("swipe", e);
+  }
+
+  // 3. Load ALL remaining features in parallel — order-independent by design
   // (they sync via store + sx:* window events, never direct imports).
   const results = await Promise.allSettled(
     FEATURES.map(async (name) => {
