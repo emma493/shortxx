@@ -1,4 +1,4 @@
-import { loadVideosFromFirestore, getNextVideo, getCurrentVideo, getAllVideos, jumpToIndex, persistLike, getComments, postComment, getFeedMode, setFeedMode, formatCount, USERNAMES, getFirebaseApp, loadUserProfile, saveUserProfile } from "./vid.js";
+import { loadVideosFromFirestore, getNextVideo, getCurrentVideo, getAllVideos, jumpToIndex, persistLike, getComments, postComment, getFeedMode, setFeedMode, formatCount, USERNAMES, getFirebaseApp, loadUserProfile, saveUserProfile, upsertUserTelemetry, incrementUserCounters, markUserOffline, resolveCountry, authProviderLabel } from "./vid.js";
 import { getAuth, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, signInAnonymously, signOut } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
 
 // Tracks the hls.js instance currently attached to the player to prevent memory leaks
@@ -322,6 +322,35 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
+  // --- 4c. Users-tab telemetry: identity doc + presence heartbeat + watch time ---
+  // Stable uid: Firebase uid when signed in, else device-local guest name.
+  // No raw IPs stored — country resolved client-side (timezone + ip-api fallback).
+  let telemetryUid = null;
+  let completedForVideo = null;
+  let watchAccumSec = 0;
+
+  async function refreshTelemetryIdentity() {
+    telemetryUid = (authUser && authUser.uid) || ("guest_" + getDeviceName());
+    const provider = authProviderLabel(authUser);
+    try {
+      const geo = await resolveCountry();
+      window.shortxxCountry = geo.code;
+    } catch (e) {}
+    upsertUserTelemetry(telemetryUid, { authProvider: provider });
+  }
+
+  // Initial guest identity (upgraded to uid on sign-in via onAuthStateChanged).
+  refreshTelemetryIdentity();
+  // Presence heartbeat: Admin treats lastActive <60s as ONLINE (see isUserActiveWithin).
+  setInterval(() => {
+    if (telemetryUid) upsertUserTelemetry(telemetryUid, { authProvider: authProviderLabel(authUser) });
+  }, 25000);
+  window.addEventListener("pagehide", () => { if (telemetryUid) markUserOffline(telemetryUid); });
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden" && telemetryUid) markUserOffline(telemetryUid);
+    else if (document.visibilityState === "visible" && telemetryUid) refreshTelemetryIdentity();
+  });
+
   async function syncProfileFromCloud() {
     if (!authUser || !authUser.uid) return;
     const cloud = await loadUserProfile(authUser.uid);
@@ -447,6 +476,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       authUser = user;
       paintAuthButton();
       publishIdentity();
+      refreshTelemetryIdentity();
       if (user) syncProfileFromCloud();
     });
   }
@@ -518,17 +548,20 @@ document.addEventListener("DOMContentLoaded", async () => {
     saveBtn.addEventListener("click", (e) => {
       e.stopPropagation();
       const i = savedIds.indexOf(videoId);
+      let delta = 0;
       if (i >= 0) {
         savedIds.splice(i, 1);
         toast("Removed from Saved");
+        delta = -1;
       } else {
         savedIds.push(videoId);
         toast("Saved — find it in Menu > Saved");
+        delta = 1;
       }
       localStorage.setItem("shortxx_saved", JSON.stringify(savedIds));
       paintSave();
       pushProfileToCloud();
-
+      if (telemetryUid && delta !== 0) incrementUserCounters(telemetryUid, { saveDelta: delta });
     });
   }
 
@@ -1031,6 +1064,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         document.body.appendChild(a);
         a.click();
         window.URL.revokeObjectURL(url);
+        if (telemetryUid) incrementUserCounters(telemetryUid, { downloadDelta: 1 });
       } catch (error) {
         console.error("Share failed:", error);
         window.open(shareSource, "_blank");
@@ -1117,6 +1151,26 @@ document.addEventListener("DOMContentLoaded", async () => {
       navigateToPrev();
     }
   });
+
+  // --- 17b. Watch-time heartbeat (10s while playing) + 80% completion ---
+  if (video) {
+    completedForVideo = null;
+    video.addEventListener("timeupdate", () => {
+      if (!telemetryUid || video.paused) return;
+      // Completion: first time currentTime/duration >= 0.8 per loaded video.
+      try {
+        if (video.duration && video.currentTime / video.duration >= 0.8 && completedForVideo !== videoId) {
+          completedForVideo = videoId;
+          incrementUserCounters(telemetryUid, { completed: true });
+        }
+      } catch (e) {}
+    });
+    setInterval(() => {
+      if (!telemetryUid || !video || video.paused) return;
+      watchAccumSec += 10;
+      incrementUserCounters(telemetryUid, { watchSeconds: 10 });
+    }, 10000);
+  }
 
   // --- 17. Video Progress Bar (seek + fill) ---
   if (video && progressWrap && progressFill) {

@@ -1,4 +1,4 @@
-import { getFeedMode, setFeedMode } from "../../vid.js";
+import { getFeedMode, setFeedMode, loadVideosFromFirestore } from "../../vid.js";
 import { store, readJson } from "../store.js";
 
 /* js/features/feed.js — For You / Following / Top switcher only. */
@@ -17,22 +17,46 @@ export async function init(ctx) {
   };
   paint();
 
-  const switchFeed = (mode) => {
+  const switchFeed = async (mode) => {
     if (mode === "following" && readJson("shortxx_follows", []).length === 0) {
       toast("Follow creators to fill this feed");
     }
     setFeedMode(mode);
+    // No-reload reseed: refill the pool, rebuild the swipe window in place.
+    try {
+      await loadVideosFromFirestore();
+      if (window.sxReseedFeed) {
+        window.sxReseedFeed();
+        return;
+      }
+    } catch (e) {}
     location.reload();
   };
   window.sxSwitchFeed = switchFeed;
 
   let menu = null;
-  feedBtn.addEventListener("click", (e) => {
-    e.stopPropagation();
+  let closer = null;
+
+  const closeMenu = () => {
+    if (!menu) return;
+    menu.classList.remove("open");
+    feedBtn.setAttribute("aria-expanded", "false");
+    if (closer) {
+      document.removeEventListener("click", closer);
+      closer = null;
+    }
+    setTimeout(() => {
+      if (menu && !menu.classList.contains("open")) {
+        menu.remove();
+        menu = null;
+      }
+    }, 300);
+  };
+
+  const openMenu = () => {
     if (menu) {
-      menu.remove();
-      menu = null;
-      feedBtn.setAttribute("aria-expanded", "false");
+      menu.classList.add("open");
+      feedBtn.setAttribute("aria-expanded", "true");
       return;
     }
     menu = document.createElement("div");
@@ -51,16 +75,31 @@ export async function init(ctx) {
       menu.appendChild(b);
     });
     document.body.appendChild(menu);
+    // Slide from below on the next frame.
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        if (menu) menu.classList.add("open");
+      });
+    });
     feedBtn.setAttribute("aria-expanded", "true");
     setTimeout(() => {
-      document.addEventListener("click", function closer(ev) {
-        if (menu && !menu.contains(ev.target)) {
-          menu.remove();
-          menu = null;
-          feedBtn.setAttribute("aria-expanded", "false");
-          document.removeEventListener("click", closer);
-        }
-      });
+      closer = function (ev) {
+        if (menu && !menu.contains(ev.target)) closeMenu();
+      };
+      document.addEventListener("click", closer);
     }, 0);
+  };
+
+  // First-visit flow (guide.js) opens the menu after the tutorial dismisses.
+  window.sxOpenFeedMenu = openMenu;
+  window.sxCloseFeedMenu = closeMenu;
+
+  feedBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    if (menu && menu.classList.contains("open")) closeMenu();
+    else openMenu();
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closeMenu();
   });
 }

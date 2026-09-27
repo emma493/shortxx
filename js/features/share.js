@@ -1,4 +1,5 @@
 import { getShareSource } from "./player.js";
+import { countDownload } from "./telemetry.js";
 
 /* js/features/share.js — Web Share API + download fallback only. */
 
@@ -28,6 +29,7 @@ export async function init() {
       a.download = "video_" + Date.now() + ".mp4";
       document.body.appendChild(a);
       a.click();
+      countDownload();
       window.URL.revokeObjectURL(url);
     } catch (error) {
       console.error("Share failed:", error);

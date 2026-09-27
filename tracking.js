@@ -55,6 +55,30 @@ function detectDeviceType() {
   return "Desktop";
 }
 
+function detectAppType() {
+  try {
+    if (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) return "PWA";
+  } catch (e) {}
+  if (window.navigator && window.navigator.standalone === true) return "PWA";
+  return "Browser";
+}
+
+function classifyReferralGroup() {
+  try {
+    const params = new URLSearchParams(location.search || "");
+    const utm = (params.get("utm_source") || "").toLowerCase();
+    const ref = document.referrer || "";
+    let host = "";
+    try { host = ref ? new URL(ref).hostname.toLowerCase() : ""; } catch (e) { host = ref.toLowerCase(); }
+    if (utm.includes("google") || host.includes("google")) return "Google";
+    if (!ref && !utm) return "Direct";
+    if (/facebook|instagram|tiktok|twitter|x\.com|youtube|snap|whatsapp|telegram/.test(utm + " " + host)) return "Social";
+    return "Organic";
+  } catch (e) {
+    return "Direct";
+  }
+}
+
 async function recordView(videoId) {
   if (!videoId || !window.shortxxDb) return;
 
@@ -81,7 +105,9 @@ async function recordView(videoId) {
     userId: window.shortxxIdentity || "ANONYMOUS",
     user_agent: navigator.userAgent || "",
     device_type: detectDeviceType(),
-    country: "GH",
+    app_type: detectAppType(),
+    referral_group: classifyReferralGroup(),
+    country: (window.shortxxCountry || "GH"),
     referrer: document.referrer || "Direct",
     timestamp: firebase.firestore.FieldValue.serverTimestamp(),
     createdAt: new Date().toISOString() // Backup ISO string for legacy queries

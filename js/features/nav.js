@@ -1,46 +1,57 @@
-/* js/features/nav.js — swipe / wheel / keyboard page navigation only.
- * index.html <-> vid2.html page-reload model (unchanged). */
+/* js/features/nav.js — swipe / wheel / keyboard feed navigation.
+ * No-reload model: gestures scroll the .snap-feed container by one viewport
+ * and swipe.js (IntersectionObserver) settles playback on the landed
+ * section. Legacy data-next/prev page-flip is gone. */
+
+function feedEl() {
+  return document.querySelector(".snap-feed");
+}
+
+function step(dir) {
+  const feed = feedEl();
+  if (!feed) return;
+  const h = feed.clientHeight || window.innerHeight;
+  try {
+    feed.scrollBy({ top: dir * h, behavior: "smooth" });
+  } catch (e) {
+    try { feed.scrollTop += dir * h; } catch (e2) {}
+  }
+}
 
 export async function init() {
-  const nextPage = document.body.dataset.next;
-  const prevPage = document.body.dataset.prev;
-  const toNext = () => {
-    if (nextPage) window.location.href = nextPage;
-  };
-  const toPrev = () => {
-    if (prevPage) window.location.href = prevPage;
-  };
+  const feed = feedEl();
+  if (!feed) return;
 
   let touchY = 0;
   window.addEventListener("touchstart", (e) => {
-    touchY = e.changedTouches[0].screenY;
-  });
+    try { touchY = e.changedTouches[0].screenY; } catch (err) {}
+  }, { passive: true });
 
+  // Snap handles the finger motion; this only covers tiny drags that don't
+  // cross the snap threshold on some browsers.
   window.addEventListener("touchend", (e) => {
-    const y = e.changedTouches[0].screenY;
-    if (touchY - y > 50) toNext();
-    if (y - touchY > 50) toPrev();
-  });
+    let y = 0;
+    try { y = e.changedTouches[0].screenY; } catch (err) { return; }
+    if (touchY - y > 90) step(1);
+    else if (y - touchY > 90) step(-1);
+  }, { passive: true });
 
   let scrolling = false;
   window.addEventListener("wheel", (e) => {
     if (scrolling) return;
-    if (e.deltaY > 30) {
-      scrolling = true;
-      toNext();
-    } else if (e.deltaY < -30) {
-      scrolling = true;
-      toPrev();
-    }
-  });
+    if (Math.abs(e.deltaY) < 30) return;
+    scrolling = true;
+    step(e.deltaY > 0 ? 1 : -1);
+    setTimeout(() => { scrolling = false; }, 450);
+  }, { passive: true });
 
   window.addEventListener("keydown", (e) => {
     if (e.key === "ArrowDown") {
       e.preventDefault();
-      toNext();
+      step(1);
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
-      toPrev();
+      step(-1);
     }
   });
 }

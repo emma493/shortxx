@@ -44,8 +44,10 @@
   background: transparent;
   border: none;
   color: #888;
-  font-size: 24px;
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 .auth-close-btn:hover { color: #fff; }
 

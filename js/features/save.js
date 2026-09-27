@@ -1,5 +1,6 @@
 import { store, writeJson } from "../store.js";
 import { saveUserProfile } from "../../vid.js";
+import { countSave } from "./telemetry.js";
 
 /* js/features/save.js — save/unsave only. */
 
@@ -35,9 +36,11 @@ export async function init(ctx) {
     if (i >= 0) {
       store.savedIds.splice(i, 1);
       toast("Removed from Saved");
+      countSave(-1);
     } else {
       store.savedIds.push(store.videoId);
       toast("Saved — find it in Menu > Saved");
+      countSave(1);
     }
     writeJson("shortxx_saved", store.savedIds);
     paintSave();

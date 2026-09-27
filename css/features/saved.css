@@ -1,0 +1,28 @@
+/* css/features/saved.css — standalone /saved page (saved.html).
+ * Same tokens as trending/discover: surface #121212, elevated #1e1e1e,
+ * border #2f2f2f, primary #fe2c55. Grid tiles reuse .sx-trending-grid /
+ * .sx-rank from trending.css — this file only adds page chrome, the
+ * saved-count bar, per-tile unsave button and the empty state. */
+.sx-saved-page { min-height: 100vh; background: #121212; padding-top: 64px; padding-bottom: calc(56px + env(safe-area-inset-bottom, 0px)); }
+@media (min-width: 1024px) { .sx-saved-page { padding-bottom: 0; padding-left: 240px; } }
+.sx-saved-wrap { max-width: 56rem; margin: 0 auto; padding: 24px 16px; }
+.sx-saved-h1 { color: #fff; font-size: 24px; line-height: 32px; font-weight: 700; margin: 0 0 4px; }
+.sx-saved-sub { color: #a0a0a0; font-size: 14px; line-height: 20px; margin: 0 0 16px; }
+.sx-saved-bar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; min-height: 24px; }
+.sx-saved-count { color: #8a8a8a; font-size: 12px; }
+.sx-saved-clear { background: none; border: none; color: #8a8a8a; font-size: 12px; cursor: pointer; padding: 8px; min-height: 44px; }
+.sx-saved-clear:hover { color: #fe2c55; }
+.sx-saved-back { position: fixed; left: 8px; top: calc(8px + env(safe-area-inset-top, 0px)); z-index: 40; display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 44px; width: auto; padding: 0 16px 0 12px; border-radius: 9999px; background: rgba(0,0,0,.45); color: #fff; text-decoration: none; font-size: 14px; font-weight: 600; white-space: nowrap; }
+.sx-saved-back .sx-back-arrow { color: #fe2c55; display: inline-flex; }
+@media (min-width: 1024px) { .sx-saved-back { display: none; } }
+/* Per-tile unsave: top-right, does not block tap-to-play (tile click plays). */
+.sx-saved-cell { position: relative; }
+.sx-saved-unsave { position: absolute; top: 4px; right: 4px; z-index: 2; display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 9999px; border: none; cursor: pointer; background: rgba(0,0,0,.6); color: #facc15; font-size: 14px; }
+.sx-saved-unsave:hover { background: rgba(0,0,0,.85); }
+.sx-saved-empty { text-align: center; padding: 48px 16px; }
+.sx-saved-empty[hidden] { display: none; }
+.sx-saved-empty-icon { font-size: 40px; margin-bottom: 12px; }
+.sx-saved-empty-title { color: #fff; font-size: 16px; font-weight: 700; margin: 0 0 4px; }
+.sx-saved-empty-sub { color: #8a8a8a; font-size: 14px; margin: 0 0 16px; }
+.sx-saved-empty-cta { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 10px 24px; border-radius: 12px; background: #c9213f; color: #fff; font-size: 14px; font-weight: 600; text-decoration: none; }
+.sx-saved-empty-cta:hover { background: #b01d38; }

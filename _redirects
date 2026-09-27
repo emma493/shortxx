@@ -1,0 +1,55 @@
+# Netlify + Cloudflare Pages redirects. Publish directory must be the
+# shortxx.live/ folder itself so /ntok.css, /js/..., /creator/... resolve.
+# Pretty profile URLs /@name are rewritten by functions/_middleware.js on
+# Cloudflare (this /@* line below is the Netlify equivalent).
+/saved  /saved/  301
+/saved.html  /saved/  301
+/discover  /discover/  200
+/trending  /trending/  200
+/creators  /creators/  200
+/liked  /liked/  200
+/saved/  /saved/index.html  200
+/creator  /creator/index.html  200
+/creator/  /creator/index.html  200
+/@*  /creator/index.html  200
+
+# BEGIN GENERATED CREATOR SLASH REDIRECTS
+/creator/AbigailStar /creator/AbigailStar/ 301
+/creator/alice-wild /creator/alice-wild/ 301
+/creator/AmeliaDawn /creator/AmeliaDawn/ 301
+/creator/AvaRose /creator/AvaRose/ 301
+/creator/baggz /creator/baggz/ 301
+/creator/blushrush /creator/blushrush/ 301
+/creator/CharlotteSky /creator/CharlotteSky/ 301
+/creator/ChloeKate /creator/ChloeKate/ 301
+/creator/cute-boob /creator/cute-boob/ 301
+/creator/EllaJune /creator/EllaJune/ 301
+/creator/ellie-nova /creator/ellie-nova/ 301
+/creator/EmilyBloom /creator/EmilyBloom/ 301
+/creator/EmmaBelle /creator/EmmaBelle/ 301
+/creator/EvaBragg /creator/EvaBragg/ 301
+/creator/EvelynRose /creator/EvelynRose/ 301
+/creator/gina /creator/gina/ 301
+/creator/GraceLynn /creator/GraceLynn/ 301
+/creator/HarperLee /creator/HarperLee/ 301
+/creator/IsabellaJoy /creator/IsabellaJoy/ 301
+/creator/ivyginger /creator/ivyginger/ 301
+/creator/kira /creator/kira/ 301
+/creator/LaylaJo /creator/LaylaJo/ 301
+/creator/LilyGrace /creator/LilyGrace/ 301
+/creator/LilyPearl /creator/LilyPearl/ 301
+/creator/linda /creator/linda/ 301
+/creator/lisa-ann /creator/lisa-ann/ 301
+/creator/lisascotty /creator/lisascotty/ 301
+/creator/lulu2210 /creator/lulu2210/ 301
+/creator/MiaHope /creator/MiaHope/ 301
+/creator/Miamiaxof /creator/Miamiaxof/ 301
+/creator/NoraJane /creator/NoraJane/ 301
+/creator/PenelopeSue /creator/PenelopeSue/ 301
+/creator/RileyQuinn /creator/RileyQuinn/ 301
+/creator/sarah /creator/sarah/ 301
+/creator/ScarlettRay /creator/ScarlettRay/ 301
+/creator/silk_mist /creator/silk_mist/ 301
+/creator/SophiaMae /creator/SophiaMae/ 301
+/creator/ZoeyAnn /creator/ZoeyAnn/ 301
+# END GENERATED CREATOR SLASH REDIRECTS

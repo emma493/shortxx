@@ -1,19 +1,59 @@
-import { getNextVideo } from "../../vid.js";
+import { getNextVideo, getVideoAt } from "../../vid.js";
 import { store } from "../store.js";
+import { getCachedThumb } from "../lib/thumb.js";
+import { noteComplete, noteWatch } from "./telemetry.js";
 
 /* js/features/player.js — video playback only (HLS + mp4 fallback).
- * Owns activeHls + currentVideoDirectUrl. Emits window event
+ * Owns one persistent #main-video element + its HLS instance; the swipe
+ * feed moves that element between sections, so playback state, listeners
+ * and rail wiring survive swipes with zero reloads. Emits window event
  * "sx:video-changed" so rail/comment/save modules can repaint. */
 
 let activeHls = null;
 let currentVideoDirectUrl = "";
+let lastViewedId = null;
+let loaderEl = null;
+
+function showLoader() {
+  if (!loaderEl) {
+    try { loaderEl = document.getElementById("sx-loader"); } catch (e) {}
+  }
+  if (loaderEl) {
+    try { loaderEl.style.display = "flex"; } catch (e) {}
+  }
+}
+
+function hideLoader() {
+  if (!loaderEl) {
+    try { loaderEl = document.getElementById("sx-loader"); } catch (e) {}
+  }
+  if (loaderEl) {
+    try { loaderEl.style.display = "none"; } catch (e) {}
+  }
+}
 
 export function getShareSource(videoEl) {
   return currentVideoDirectUrl || (videoEl && videoEl.src) || location.href;
 }
 
-export function playNextVideo(videoElement) {
-  const videoData = getNextVideo();
+/* Publish a video as "current" for the whole rail. Single choke point so
+ * both the legacy single-play path and the swipe feed repaint identically. */
+export function activateVideo(videoData) {
+  if (!videoData) return;
+  store.current = videoData;
+  store.videoId = videoData.id || null;
+  store.creator = videoData.creator || null;
+  store.linkedCreator = !!(videoData.creatorLinked && store.creator);
+  window.dispatchEvent(new CustomEvent("sx:video-changed"));
+  if (videoData.id && videoData.id !== lastViewedId) {
+    lastViewedId = videoData.id;
+    if (typeof window.trackVideoView === "function") {
+      try { window.trackVideoView(videoData.id); } catch (e) {}
+    }
+  }
+}
+
+export function playVideoData(videoElement, videoData) {
   if (!videoData || !videoElement) return null;
 
   const isLegacyString = typeof videoData === "string";
@@ -28,6 +68,12 @@ export function playNextVideo(videoElement) {
     sessionStorage.setItem("lastPlayedVideoUrl", currentVideoDirectUrl);
   } catch (e) {}
 
+  // Carry the user's mute choice across section moves (autoplay-safe).
+  try {
+    const saved = localStorage.getItem("videoMuted");
+    if (saved === "false") videoElement.muted = false;
+  } catch (e) {}
+
   videoElement.disableRemotePlayback = true;
   videoElement.setAttribute("disableremoteplayback", "true");
   videoElement.setAttribute("x-webkit-airplay", "deny");
@@ -40,10 +86,19 @@ export function playNextVideo(videoElement) {
   }
 
   const hlsUrl = !isLegacyString ? videoData.hlsUrl : null;
-  const posterUrl = !isLegacyString ? videoData.posterUrl : null;
+  // Thumbnail-first: poster_url wins, else the already-cached grid frame
+  // (zero new downloads), so the user sees a thumbnail + loader instead of
+  // black while the video gets ready.
+  let posterUrl = !isLegacyString ? videoData.posterUrl : null;
+  if (!posterUrl && !isLegacyString) {
+    try { posterUrl = getCachedThumb(videoData); } catch (e) {}
+  }
   try {
     videoElement.poster = posterUrl || "";
   } catch (e) {}
+  showLoader();
+  // Fresh source, fresh watch-time base for telemetry.
+  try { videoElement._sxLastT = undefined; } catch (e) {}
 
   const attemptPlay = () => {
     const playPromise = videoElement.play();
@@ -86,23 +141,61 @@ export function playNextVideo(videoElement) {
   return videoData;
 }
 
+/* Legacy single-play path (kept for compat): advance the rotation pointer
+ * and play on the given element. */
+export function playNextVideo(videoElement) {
+  const videoData = getNextVideo();
+  if (!videoData) return null;
+  return playVideoData(videoElement, videoData);
+}
+
+/* Swipe-feed path: random access without advancing any pointer. The pool
+ * index is persisted by getVideoAt for resume-across-visits. */
+export function playVideoAt(videoElement, i) {
+  const videoData = getVideoAt(i);
+  if (!videoData) return null;
+  return playVideoData(videoElement, videoData);
+}
+
 export async function init(ctx) {
   const video = document.getElementById("main-video");
   if (!video) return;
-  let played = false;
-  const attempt = () => {
-    if (played) return;
-    const data = playNextVideo(video);
-    if (!data) return;
-    played = true;
-    store.current = ctx.getCurrentVideo ? ctx.getCurrentVideo() : null;
-    store.videoId = store.current && store.current.id ? store.current.id : null;
-    store.creator = store.current && store.current.creator ? store.current.creator : null;
-    store.linkedCreator = !!(store.current && store.current.creatorLinked && store.creator);
-    window.dispatchEvent(new CustomEvent("sx:video-changed"));
-  };
-  // Videos may still be loading (UI wires up first) — play now if the pool
-  // is ready, otherwise play as soon as it arrives.
-  attempt();
-  window.addEventListener("sx:videos-ready", attempt);
+  // Authed-only engagement counters (telemetry.js no-ops for guests):
+  // every 10 s of real playback + each completed play.
+  let watchAccum = 0;
+  video.addEventListener("timeupdate", () => {
+    if (video.paused) return;
+    // Positive sub-second diffs only — source swaps/seeks reset the base.
+    if (typeof video._sxLastT === "number") {
+      const dt = video.currentTime - video._sxLastT;
+      if (dt > 0 && dt < 5) watchAccum += dt;
+    }
+    video._sxLastT = video.currentTime;
+    if (watchAccum >= 10) {
+      watchAccum = 0;
+      noteWatch(10);
+    }
+  });
+  video.addEventListener("seeked", () => {
+    video._sxLastT = video.currentTime;
+  });
+  video.addEventListener("ended", () => {
+    noteComplete();
+  });
+  // TikTok-style loader lifecycle: visible while getting ready or stalled,
+  // gone the moment frames render.
+  video.addEventListener("playing", hideLoader);
+  video.addEventListener("canplay", hideLoader);
+  video.addEventListener("waiting", showLoader);
+  video.addEventListener("loadstart", showLoader);
+  // Single-shot boot play is owned by swipe.js now (it needs the pool
+  // first). Fallback: if swipe never boots (no pool), play rotation head.
+  window.addEventListener("sx:videos-ready", () => {
+    try {
+      if (window.sxSwipeBooted) return;
+      const data = playNextVideo(video);
+      if (!data) return;
+      activateVideo(ctx.getCurrentVideo ? ctx.getCurrentVideo() : data);
+    } catch (e) {}
+  }, { once: true });
 }

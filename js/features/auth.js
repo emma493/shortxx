@@ -1,5 +1,6 @@
 import { getFirebaseApp, loadUserProfile, saveUserProfile } from "../../vid.js";
 import { store, publishIdentity, writeJson } from "../store.js";
+import { ensureAuthModal } from "../lib/auth-modal.js";
 import {
   getAuth,
   onAuthStateChanged,
@@ -41,6 +42,9 @@ function authErrorText(code) {
 }
 
 export async function init(ctx) {
+  // Sub-pages carry no inline modal — inject the shared copy first so every
+  // getElementById below resolves on every page.
+  ensureAuthModal();
   const toast = ctx.toast || (() => {});
   const overlay = document.getElementById("auth-modal-overlay");
   const form = document.getElementById("auth-form");
@@ -107,16 +111,37 @@ export async function init(ctx) {
   };
 
   const paintAuthButton = () => {
-    const label = document.querySelector("[data-login] [data-auth-label]");
-    const btn = document.querySelector("[data-login]");
-    if (!label || !btn) return;
+    const loggedIn = !!(store.authUser && !store.authUser.isAnonymous);
+    // Slide-out drawer button (built lazily by menu.js) + any overlay clone.
+    document.querySelectorAll("[data-login]").forEach((btn) => {
+      const label = btn.querySelector("[data-auth-label]");
+      if (label) label.textContent = loggedIn ? "Log Out" : "Log In";
+      btn.setAttribute("aria-label", loggedIn ? "Log out" : "Log in");
+    });
+    // Static sub-page login buttons (data-auth-login > [data-auth-label]).
+    document.querySelectorAll("[data-auth-login]").forEach((btn) => {
+      const label = btn.querySelector("[data-auth-label]");
+      if (label) label.textContent = loggedIn ? "Log out" : "Log in";
+      btn.setAttribute("aria-label", loggedIn ? "Log out" : "Log in");
+    });
+    // Feed overlay clones (discover.js / trending.js [data-auth] buttons).
+    document.querySelectorAll("[data-auth] [data-auth-label]").forEach((label) => {
+      label.textContent = loggedIn ? "Log out" : "Log in";
+    });
+  };
+  // Freshly built drawers (menu.js builds on open) repaint on demand.
+  window.sxPaintAuth = paintAuthButton;
+
+  // Shared login/logout entry: logged-in users sign out, everyone else
+  // gets the modal. Used by static sub-page buttons, the drawer row and
+  // the feed overlay clones so every entry behaves identically.
+  window.sxAuthEntry = async () => {
     if (store.authUser && !store.authUser.isAnonymous) {
-      label.textContent = "Log Out";
-      btn.setAttribute("aria-label", "Log out");
-    } else {
-      label.textContent = "Log In";
-      btn.setAttribute("aria-label", "Log in");
+      const ok = await window.sxAuthSignOut();
+      toast(ok ? "Logged out" : "Log out failed — try again");
+      return;
     }
+    openAuth();
   };
 
   const afterAuth = async (message) => {
@@ -162,6 +187,15 @@ export async function init(ctx) {
       emailFlow("signup");
     });
   }
+  // Static sub-page header/sidefoot entry points (discover, trending,
+  // creators, liked, saved, creator, 404). Toggle: log out when authed.
+  document.querySelectorAll("[data-auth-login]").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      e.preventDefault();
+      window.sxAuthEntry();
+    });
+  });
+  paintAuthButton();
   if (loginBtn) loginBtn.addEventListener("click", () => emailFlow("login"));
   if (googleBtn) {
     googleBtn.addEventListener("click", async () => {

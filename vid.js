@@ -1,6 +1,6 @@
 import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
 import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-analytics.js";
-import { getFirestore, collection, getDocs, query, where, doc, getDoc, setDoc, updateDoc, increment, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+import { getFirestore, collection, getDocs, query, where, limit, doc, getDoc, setDoc, updateDoc, increment, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 
 // Firebase Configuration (project: shortxx-live)
 const firebaseConfig = {
@@ -88,6 +88,65 @@ let fetchedVideos = [];
 let currentVideoIndex = 0;
 let currentVideo = null;
 let preloaderElement = null;
+// Unfiltered pool (preference + feed-mode ordering derive from this).
+let allRawVideos = [];
+
+// Content preference: which creators' videos may enter the pool.
+// 'all' = Girls + Couples mix. Persisted as shortxx_pref, default 'all'.
+export function getContentPreference() {
+  try {
+    const p = localStorage.getItem("shortxx_pref");
+    return p === "girls" || p === "couples" ? p : "all";
+  } catch (e) {
+    return "all";
+  }
+}
+
+function effectiveCategory(v) {
+  const c = v.creatorCategory || v.category;
+  return c === "girls" || c === "couples" ? c : null;
+}
+
+function applyPreference(list) {
+  const pref = getContentPreference();
+  if (pref === "all") return list;
+  const kept = list.filter((v) => {
+    const c = effectiveCategory(v);
+    // Unresolvable videos stay visible (Admin guarantees coverage; this is
+    // belt-and-braces so a data gap can never blank the app).
+    return !c || c === pref;
+  });
+  // Empty-result guard: never hand downstream an empty pool when videos exist.
+  if (kept.length === 0 && list.length > 0) {
+    try {
+      window.dispatchEvent(new CustomEvent("sx:pref-empty", { detail: { pref } }));
+    } catch (e) {}
+    return list;
+  }
+  return kept;
+}
+
+/* Persist a new preference, rebuild the pool + order, restart at the head.
+ * Grids, swipe window and player all follow via sx:videos-ready. Returns
+ * false when the category matched nothing (pool fell back to full + the
+ * caller should toast); true otherwise. */
+export function setContentPreference(pref) {
+  const p = pref === "girls" || pref === "couples" ? pref : "all";
+  try {
+    localStorage.setItem("shortxx_pref", p);
+  } catch (e) {}
+  if (!allRawVideos.length) return true;
+  fetchedVideos = applyFeedOrder(allRawVideos);
+  currentVideoIndex = 0;
+  try {
+    localStorage.setItem("currentVideoIndex", "0");
+  } catch (e) {}
+  try {
+    window.dispatchEvent(new CustomEvent("sx:videos-ready"));
+  } catch (e) {}
+  if (p === "all") return true;
+  return allRawVideos.some((v) => effectiveCategory(v) === p);
+}
 
 // Creator directory (Session A `creators` collection). Best-effort: rules
 // may not be deployed yet — any failure falls back to stable pseudonyms.
@@ -103,6 +162,7 @@ export async function loadCreators() {
       const data = d.data();
       if (data.username) {
         const num = (v) => (typeof v === "number" ? v : null);
+        const cat = data.category === "girls" || data.category === "couples" ? data.category : null;
         map[d.id] = {
           username: data.username,
           avatarUrl: data.avatarUrl || null,
@@ -110,6 +170,7 @@ export async function loadCreators() {
           followers: num(data.followers),
           following: num(data.following),
           likesTotal: num(data.likesTotal),
+          category: cat,
         };
       }
     });
@@ -131,11 +192,15 @@ function resolveCreator(data, docId) {
       followers: ref.followers,
       following: ref.following,
       likesTotal: ref.likesTotal,
+      creatorCategory: ref.category || null,
       linked: true,
     };
   }
-  // Unlinked legacy video: no fake identity — caller hides profile UI.
-  return { name: null, avatarUrl: null, bio: null, followers: null, following: null, likesTotal: null, linked: false };
+  // Unlinked legacy video: fall back to stable pseudonym so /@name
+  // profiles (sitemap, creators grid, feed avatar) always resolve to
+  // videos instead of rendering empty. linked=true keeps the feed avatar
+  // visible and the standalone /@ route grouped by the same name.
+  return { name: creatorFor(docId), avatarUrl: null, bio: null, followers: null, following: null, likesTotal: null, creatorCategory: null, linked: true };
 }
 
 function readFollows() {
@@ -159,17 +224,19 @@ export function setFeedMode(mode) {
 }
 
 function applyFeedOrder(list) {
+  // Content preference first (Girls / Couples / All), then feed mode.
+  const scoped = applyPreference(list);
   const mode = getFeedMode();
   if (mode === "top") {
-    return [...list].sort((a, b) => (b.views || 0) - (a.views || 0));
+    return [...scoped].sort((a, b) => (b.views || 0) - (a.views || 0));
   }
   if (mode === "following") {
     const follows = readFollows();
-    const filtered = list.filter((v) => follows.includes(v.creator));
+    const filtered = scoped.filter((v) => follows.includes(v.creator));
     // Empty following feed falls back to everything (caller toasts a hint).
-    return filtered.length > 0 ? filtered : [...list];
+    return filtered.length > 0 ? filtered : [...scoped];
   }
-  return shuffleArray([...list]);
+  return shuffleArray([...scoped]);
 }
 
 /**
@@ -198,7 +265,14 @@ function preloadNextVideo() {
 
   if (!preloaderElement) {
     preloaderElement = document.createElement("video");
-    preloaderElement.preload = "auto";
+    // Save-Data / 2G: metadata only until the video is actually next —
+    // a full "auto" preload per swipe stalls low-end phones.
+    try {
+      const c = navigator.connection || {};
+      preloaderElement.preload = (c.saveData || /2g/.test(c.effectiveType || "")) ? "metadata" : "auto";
+    } catch (e) {
+      preloaderElement.preload = "auto";
+    }
   }
 
   preloaderElement.src = nextVideo.url;
@@ -212,7 +286,11 @@ function preloadNextVideo() {
 export async function loadVideosFromFirestore() {
   try {
     const videosRef = collection(db, "videos");
-    const q = query(videosRef, where("is_active", "==", true));
+    // Bounded pool (perf): grids + shuffle sample from up to 200 active
+    // videos (arbitrary subset — no orderBy — instead of the whole
+    // collection). Grid pages paginate client-side over this pool
+    // (48-chunk "Show more").
+    const q = query(videosRef, where("is_active", "==", true), limit(200));
     const querySnapshot = await getDocs(q);
 
     // Creator directory first (best-effort) so names/avatars resolve below.
@@ -249,6 +327,7 @@ export async function loadVideosFromFirestore() {
           likes: typeof data.likes === 'number' ? data.likes : 0,
           creator: who.name,
           creatorLinked: who.linked,
+          creatorCategory: who.creatorCategory || null,
           avatarUrl: who.avatarUrl,
           // Optional Session-A fields (captionAI / Upload page). Absent on
           // legacy docs — every consumer must tolerate missing values.
@@ -266,6 +345,7 @@ export async function loadVideosFromFirestore() {
     }
 
     // Order per active feed (For You shuffle / Following / Top).
+    allRawVideos = rawVideos;
     fetchedVideos = applyFeedOrder(rawVideos);
 
     // Retrieve previous index session if available
@@ -285,7 +365,6 @@ export async function loadVideosFromFirestore() {
       }
     } catch (e) { /* storage blocked: ignore */ }
 
-    console.log(`Loaded ${fetchedVideos.length} active videos from Firestore (feed: ${getFeedMode()}).`);
     preloadNextVideo();
     return fetchedVideos;
   } catch (error) {
@@ -327,6 +406,28 @@ export function getCurrentVideo() {
   return currentVideo;
 }
 
+/** Random access into the ordered pool (swipe feed) without advancing
+ * the rotation pointer. Wraps modulo. Records a view like getNextVideo. */
+export function getVideoAt(i) {
+  if (!fetchedVideos.length) return null;
+  const idx = ((i % fetchedVideos.length) + fetchedVideos.length) % fetchedVideos.length;
+  const videoData = fetchedVideos[idx];
+  if (!videoData) return null;
+  currentVideo = videoData;
+  try {
+    localStorage.setItem("currentVideoIndex", String(idx));
+  } catch (e) {}
+  if (videoData && videoData.id && typeof window.trackVideoView === "function") {
+    window.trackVideoView(videoData.id);
+  }
+  return videoData;
+}
+
+/** Pool size for the swipe window (0 until Firestore loads). */
+export function getVideoCount() {
+  return fetchedVideos.length;
+}
+
 /** Full ordered pool (powers Discover grid + search). */
 export function getAllVideos() {
   return [...fetchedVideos];
@@ -361,6 +462,132 @@ function detectDeviceType() {
   if (/tablet|ipad|playbook|silk/.test(ua)) return "Tablet";
   if (/mobile|iphone|ipod|android|blackberry|windows phone/.test(ua)) return "Mobile";
   return "Desktop";
+}
+
+/* ---- User telemetry for the Admin Users tab (merge-safe, country-only) ----
+ * PWA detection reuses the standalone display-mode check from pwa-banner.js.
+ * Referral is normalized to Direct/Google/Organic/Social from utm_source +
+ * document.referrer. Country is resolved client-side (timezone + optional
+ * ip-api fallback) — raw IPs are never stored. */
+
+export function detectAppType() {
+  try {
+    if (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) return "PWA";
+  } catch (e) {}
+  if (window.navigator && window.navigator.standalone === true) return "PWA";
+  return "Browser";
+}
+
+export function classifyReferral() {
+  try {
+    const params = new URLSearchParams(location.search || "");
+    const utm = (params.get("utm_source") || "").toLowerCase();
+    const ref = document.referrer || "";
+    let host = "";
+    try { host = ref ? new URL(ref).hostname.toLowerCase() : ""; } catch (e) { host = ref.toLowerCase(); }
+    const raw = ref || (utm ? utm : "Direct");
+    if (utm.includes("google") || host.includes("google")) return { group: "Google", raw: raw || "google" };
+    if (!ref && !utm) return { group: "Direct", raw: "Direct" };
+    if (/facebook|instagram|tiktok|twitter|x\.com|youtube|snap|whatsapp|telegram/.test(utm + " " + host)) {
+      return { group: "Social", raw: raw.slice(0, 120) || "Social" };
+    }
+    if (host && host !== location.hostname) return { group: "Organic", raw: host.slice(0, 120) };
+    if (utm) return { group: "Organic", raw: utm.slice(0, 120) };
+    return { group: "Direct", raw: (raw || "Direct").slice(0, 120) };
+  } catch (e) {
+    return { group: "Direct", raw: "Direct" };
+  }
+}
+
+let _cachedCountry = null;
+
+export async function resolveCountry() {
+  if (_cachedCountry) return _cachedCountry;
+  // 1. Timezone heuristic (offline, free): Accra/Africa -> GH.
+  try {
+    const tz = (Intl.DateTimeFormat().resolvedOptions().timeZone || "").toLowerCase();
+    if (tz.includes("accra")) { _cachedCountry = { code: "GH", source: "client-locale" }; return _cachedCountry; }
+  } catch (e) {}
+  // 2. Optional ip-api lookup (country code only, fail-soft to GH).
+  try {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 2500);
+    const res = await fetch("https://ip-api.com/json/?fields=countryCode", { signal: ctrl.signal });
+    clearTimeout(t);
+    if (res.ok) {
+      const j = await res.json();
+      if (j && typeof j.countryCode === "string" && j.countryCode.length === 2) {
+        _cachedCountry = { code: j.countryCode.toUpperCase(), source: "ip-api" };
+        return _cachedCountry;
+      }
+    }
+  } catch (e) {}
+  _cachedCountry = { code: "GH", source: "client-locale" };
+  return _cachedCountry;
+}
+
+export function authProviderLabel(user) {
+  if (!user) return "guest";
+  if (user.isAnonymous) return "guest";
+  try {
+    const pid = (user.providerData && user.providerData[0] && user.providerData[0].providerId) || "";
+    if (pid.includes("google")) return "google";
+    if (pid.includes("password")) return "email";
+  } catch (e) {}
+  return user.email ? "email" : "guest";
+}
+
+/** Upsert merge-safe user doc: presence + device/platform/auth/geo.
+ * NOTE: firstSeen is intentionally NOT written here — merge:true would
+ * overwrite it on every 25 s heartbeat, destroying the original value the
+ * Admin date-range filter depends on. First-seen defaults are applied
+ * read-side (Admin subscribeToUsers falls back to `new Date()`). */
+export async function upsertUserTelemetry(uid, extra) {
+  if (!uid) return;
+  try {
+    const appType = detectAppType();
+    const { group, raw } = classifyReferral();
+    const geo = await resolveCountry();
+    await setDoc(doc(db, "users", uid), {
+      userId: uid,
+      deviceType: detectDeviceType(),
+      appType: appType,
+      isPWA: appType === "PWA",
+      trafficSource: raw,
+      referralGroup: group,
+      country: geo.code,
+      countrySource: geo.source,
+      status: "Online",
+      lastActive: serverTimestamp(),
+      currentPage: location.pathname + location.search,
+      authProvider: (extra && extra.authProvider) || "guest",
+    }, { merge: true });
+  } catch (err) {
+    console.warn("User telemetry upsert failed:", err);
+  }
+}
+
+/** Increment engagement counters without overwriting profile fields. */
+export async function incrementUserCounters(uid, counters) {
+  if (!uid || !counters) return;
+  try {
+    const payload = { lastActive: serverTimestamp(), status: "Online" };
+    if (counters.watchSeconds) payload.totalDurationSeconds = increment(counters.watchSeconds);
+    if (counters.completed) payload.videosWatched = increment(1);
+    if (counters.saveDelta) payload.totalSaves = increment(counters.saveDelta);
+    if (counters.downloadDelta) payload.totalDownloads = increment(counters.downloadDelta);
+    await setDoc(doc(db, "users", uid), payload, { merge: true });
+  } catch (err) {
+    console.warn("User counter increment failed:", err);
+  }
+}
+
+/** Mark user offline on tab hide (best-effort; heartbeat is source of truth). */
+export async function markUserOffline(uid) {
+  if (!uid) return;
+  try {
+    await setDoc(doc(db, "users", uid), { status: "Offline", lastActive: serverTimestamp() }, { merge: true });
+  } catch (err) {}
 }
 
 /**
@@ -408,7 +635,8 @@ export async function postComment(videoId, name, text) {
       video_id: videoId,
       userId: (name || "ANONYMOUS").slice(0, 32),
       device_type: detectDeviceType(),
-      country: "GH",
+      app_type: detectAppType(),
+      country: (typeof window !== "undefined" && window.shortxxCountry) || "GH",
       referrer: document.referrer || "Direct",
       timestamp: serverTimestamp(),
       createdAt: new Date().toISOString(),

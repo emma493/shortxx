@@ -1,5 +1,8 @@
 /* js/features/menu.js — slide-out sidebar drawer only. CSS lives in
- * css/features/menu.css (moved out of JS injection). */
+ * css/features/menu.css. HTML/items come from js/lib/side-menu.js so
+ * Discover / Trending / Profile clones render IDENTICAL items. */
+
+import { getMenuHTML, wireMenu } from "../lib/side-menu.js";
 
 let sheet = null;
 let drawer = null;
@@ -27,73 +30,27 @@ export async function init(ctx) {
     const wrap = document.createElement("div");
     wrap.className = "sx-menu-root";
     wrap.style.display = "none";
-    wrap.innerHTML =
-      '<div class="sx-sidebar-backdrop" data-close></div>' +
-      '<aside class="sx-sidebar" aria-label="Site navigation">' +
-      '<div class="sx-sidebar-header"><div class="sx-sidebar-title">Shortxx</div>' +
-      '<div class="sx-sidebar-actions">' +
-      '<button class="sx-signup-btn" data-signup>Sign Up</button>' +
-      '<button class="sx-close-btn" data-close aria-label="Close menu">✕</button></div></div>' +
-      '<nav><button class="sidebar-link active-link" data-go="home"><i class="fas fa-home"></i><span>Home</span></button>' +
-      '<button class="sidebar-link" data-go="discover"><i class="fas fa-compass"></i><span>Discover</span></button>' +
-      '<button class="sidebar-link" data-go="following"><i class="fas fa-user-check"></i><span>Following feed</span></button>' +
-      '<button class="sidebar-link" data-go="trending"><i class="fas fa-fire"></i><span>Trending</span></button>' +
-      '<button class="sidebar-link" data-go="saved"><i class="fas fa-bookmark"></i><span>Saved Videos</span></button>' +
-      (isInstalled() ? "" : '<button class="sidebar-link" data-act="install"><i class="fas fa-download"></i><span>Install App</span></button>') +
-      "</nav>" +
-      '<div class="sx-div"></div><nav>' +
-      '<a class="sidebar-link" href="https://go.whitetrafsa.com?userId=dd571e000ae6f07ef31fa3fb50db3d7353ab3ba1c6c501e61a894d69b80e96ae" target="_blank" rel="noopener"><i class="fas fa-video"></i><span>Live Cams</span></a>' +
-      "</nav>" +
-      '<div class="sx-footer"><div><a href="#" data-dead>Terms of Service</a><a href="#" data-dead>Privacy Policy</a></div>' +
-      '<a href="#" data-dead class="prefer">Prefer us on Google</a></div></aside>';
+    // IDENTICAL items everywhere — single source of truth.
+    wrap.innerHTML = getMenuHTML();
     document.body.appendChild(wrap);
     sheet = wrap;
     drawer = wrap.querySelector(".sx-sidebar");
-    wrap.querySelectorAll("[data-close]").forEach((el) => el.addEventListener("click", closeMenu));
-    wrap.querySelector("[data-signup]").addEventListener("click", () => {
-      closeMenu();
-      if (window.sxOpenAuth) window.sxOpenAuth();
-    });
-    wrap.querySelectorAll("[data-dead]").forEach((el) =>
-      el.addEventListener("click", (e) => e.preventDefault()),
-    );
-    wrap.querySelectorAll("[data-go]").forEach((el) =>
-      el.addEventListener("click", () => {
-        const go = el.getAttribute("data-go");
-        closeMenu();
-        if (go === "home") location.href = "./index.html";
-        else if (go === "discover") window.sxOpenDiscover && window.sxOpenDiscover("all");
-        else if (go === "saved") window.sxOpenDiscover && window.sxOpenDiscover("saved");
-        else if (go === "trending") window.sxOpenTrending && window.sxOpenTrending("all");
-        else if (go === "following" || go === "top") window.sxSwitchFeed && window.sxSwitchFeed(go);
-      }),
-    );
-    const installEl = wrap.querySelector('[data-act="install"]');
-    if (installEl) {
-      installEl.addEventListener("click", async () => {
-        closeMenu();
-        const helper = window.ShortxxPWA;
-        if (helper && helper.canPrompt()) {
-          const outcome = await helper.promptInstall();
-          if (outcome === "accepted") {
-            try {
-              localStorage.setItem("shortxx_pwa_installed", "1");
-            } catch (e) {}
-            toast("Shortxx installed");
-          }
-        } else if (/iphone|ipad|ipod/i.test(navigator.userAgent || "")) {
-          toast("iPhone: tap Share, then Add to Home Screen");
-        } else {
-          toast("Use your browser menu: Add to Home Screen");
-        }
-      });
-    }
+    wireMenu(wrap, { close: closeMenu, toast });
     return wrap;
+  }
+
+  function isOpen() {
+    return !!sheet && sheet.style.display !== "none";
   }
 
   function openMenu() {
     const wrap = build();
-    wrap.style.display = "";
+    wrap.style.display = "block";
+    wrap.removeAttribute("hidden");
+    document.body.style.overflow = "hidden";
+    try {
+      if (window.sxPaintAuth) window.sxPaintAuth();
+    } catch (e) {}
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         wrap.querySelector(".sx-sidebar-backdrop").classList.add("active");
@@ -101,30 +58,42 @@ export async function init(ctx) {
       });
     });
     if (menuBtn) menuBtn.setAttribute("aria-expanded", "true");
+    if (moreBtn) moreBtn.setAttribute("aria-expanded", "true");
   }
 
   function closeMenu() {
-    if (!sheet || sheet.style.display === "none") return;
+    if (!isOpen()) return;
     sheet.querySelector(".sx-sidebar-backdrop").classList.remove("active");
     if (drawer) drawer.classList.remove("active");
     if (menuBtn) menuBtn.setAttribute("aria-expanded", "false");
+    if (moreBtn) moreBtn.setAttribute("aria-expanded", "false");
+    document.body.style.overflow = "";
     setTimeout(() => {
       if (sheet) sheet.style.display = "none";
     }, 300);
   }
   window.sxCloseMenu = closeMenu;
+  window.sxOpenMenu = openMenu;
+  window.sxToggleMenu = () => {
+    if (isOpen()) closeMenu();
+    else openMenu();
+  };
 
   if (menuBtn) {
     menuBtn.addEventListener("click", (e) => {
       e.stopPropagation();
-      if (sheet && sheet.style.display !== "none") closeMenu();
+      if (isOpen()) closeMenu();
       else openMenu();
     });
   }
   if (moreBtn) {
     moreBtn.addEventListener("click", (e) => {
       e.stopPropagation();
-      openMenu();
+      if (isOpen()) closeMenu();
+      else openMenu();
     });
   }
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closeMenu();
+  });
 }

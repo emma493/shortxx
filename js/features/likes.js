@@ -46,8 +46,32 @@ export async function init(ctx) {
     }
     if (likeCountEl) likeCountEl.textContent = formatCount(store.current ? store.current.likes : 0);
     paintLike();
+    if (likeHeart) {
+      likeHeart.classList.remove("sx-pop");
+      void likeHeart.offsetWidth;
+      likeHeart.classList.add("sx-pop");
+    }
     persistLike(store.videoId, liked);
     pushProfile();
+  };
+
+  // Center-screen tap feedback (play/pause flash). Ported from the previous
+  // site's spawnFeedbackIcon (refs/shortieshub_app_fix/script.js); inline SVG
+  // like the big heart so no icon-font dependency is needed.
+  const flash = (kind) => {
+    const el = document.createElement("div");
+    el.setAttribute("aria-hidden", "true");
+    el.className = "sx-tap-flash";
+    const path =
+      kind === "pause"
+        ? '<rect x="6" y="4" width="4" height="16" rx="1" fill="currentColor"/><rect x="14" y="4" width="4" height="16" rx="1" fill="currentColor"/>'
+        : '<path d="M7 4.5a1 1 0 0 1 1.54-.84l11 7.5a1 1 0 0 1 0 1.68l-11 7.5A1 1 0 0 1 7 19.5z" fill="currentColor"/>';
+    el.innerHTML =
+      '<svg width="64" height="64" viewBox="0 0 24 24" fill="none" style="filter:drop-shadow(0 4px 10px rgba(0,0,0,0.5))">' +
+      path +
+      "</svg>";
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 600);
   };
 
   const showBigHeart = (x, y) => {
@@ -81,7 +105,13 @@ export async function init(ctx) {
         return;
       }
       lastTap = now;
-      if (video.paused) video.play().catch(() => {});
+      if (video.paused) {
+        video.play().catch(() => {});
+        flash("play");
+      } else {
+        video.pause();
+        flash("pause");
+      }
     });
   }
 

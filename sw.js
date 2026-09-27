@@ -1,11 +1,11 @@
 /* Shortxx service worker — app-shell caching only.
  * Video streams (HLS/mp4), Firestore traffic, analytics and ad networks
  * always go straight to the network so playback and data stay fresh. */
-const CACHE = "shortxx-v2";
+const CACHE = "shortxx-v9";
 const SHELL = [
   "/",
   "/index.html",
-  "/vid2.html",
+  "/saved.html",
   "/ntok.css",
   "/css/base.css",
   "/css/effects.css",
@@ -17,13 +17,22 @@ const SHELL = [
   "/css/features/trending.css",
   "/css/features/player.css",
   "/css/features/creator-page.css",
+  "/css/features/guide.css",
+  "/css/features/prefs.css",
+  "/css/features/saved.css",
   "/css/features/pwa.css",
   "/js/main.js",
   "/js/store.js",
   "/js/lib/dom.js",
+  "/js/lib/side-menu.js",
+  "/js/lib/thumb.js",
   "/js/features/player.js",
+  "/js/features/swipe.js",
+  "/js/features/ads.js",
   "/js/features/creator.js",
   "/js/features/creator-page.js",
+  "/js/features/guide.js",
+  "/js/features/prefs.js",
   "/js/features/auth.js",
   "/js/features/likes.js",
   "/js/features/follow.js",
@@ -35,10 +44,10 @@ const SHELL = [
   "/js/features/trending.js",
   "/js/features/mute.js",
   "/js/features/share.js",
+  "/js/features/video-title.js",
   "/js/features/chrome.js",
   "/js/features/nav.js",
   "/js/features/progress.js",
-  "/script.js",
   "/vid.js",
   "/tracking.js",
   "/app-mode.js",
@@ -60,7 +69,9 @@ const SHELL = [
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches.open(CACHE).then((cache) => cache.addAll(SHELL)).then(() => self.skipWaiting()),
+    caches.open(CACHE).then((cache) =>
+      Promise.allSettled(SHELL.map((url) => cache.add(url)))
+    ).then(() => self.skipWaiting()),
   );
 });
 
@@ -111,18 +122,19 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Same-origin static assets: cache first.
+  // Same-origin static assets: stale-while-revalidate so deploys go live
+  // without waiting for a CACHE version bump.
   if (url.origin === self.location.origin) {
     event.respondWith(
       caches.match(req).then((hit) => {
-        if (hit) return hit;
-        return fetch(req).then((res) => {
+        const network = fetch(req).then((res) => {
           if (res && res.ok) {
             const copy = res.clone();
             caches.open(CACHE).then((cache) => cache.put(req, copy)).catch(() => {});
           }
           return res;
-        });
+        }).catch(() => hit);
+        return hit || network;
       }),
     );
     return;
@@ -141,3 +153,5 @@ self.addEventListener("fetch", (event) => {
       .catch(() => caches.match(req)),
   );
 });
+
+/* Notifications (Web Push) removed — no push / notificationclick handlers. */

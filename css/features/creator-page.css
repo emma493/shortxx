@@ -1,35 +1,79 @@
-/* css/features/creator-page.css — full-page creator profile (NudiTok/TikTok design).
- * Covers the whole viewport like a profile route. No side menu inside. */
+/* css/features/creator-page.css — 1:1 NudiTok profile page (refs/profile page).
+ * Banner-free header row: circular gradient spinning-ring avatar beside the
+ * handle, Share + Follow pills, stat row (Posts/Followers/Following/Likes/
+ * Views), hashtag pills, Videos header, 3-col 9/16 grid with play + heart
+ * counts. */
 .cp-backdrop { display: none; }
-.cp-panel { position: fixed; inset: 0; z-index: 950; background: #000; transform: translateX(100%); transition: transform 0.3s ease-in-out; display: flex; flex-direction: column; }
+.cp-panel { position: fixed; inset: 0; z-index: 950; background: #121212; transform: translateX(100%); transition: transform 0.3s ease-in-out; display: flex; flex-direction: column; overflow-y: auto; overscroll-behavior: contain; }
 .cp-panel.active { transform: translateX(0); }
-.cp-centered { width: 100%; height: 100%; max-width: 480px; margin: 0 auto; display: flex; flex-direction: column; background: #000; }
-@media (min-width: 768px) {
-  .cp-centered { border-left: 1px solid rgba(255, 255, 255, 0.08); border-right: 1px solid rgba(255, 255, 255, 0.08); }
-}
-.cp-head { display: flex; align-items: center; gap: 4px; padding: calc(8px + env(safe-area-inset-top, 0px)) 8px 8px; border-bottom: 1px solid rgba(255, 255, 255, 0.08); flex: none; }
-.cp-back { background: none; border: none; color: #fff; font-size: 22px; padding: 8px 10px; cursor: pointer; min-width: 44px; min-height: 44px; }
-.cp-head-name { color: #fff; font-size: 16px; font-weight: 800; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: center; }
-.cp-head-spacer { min-width: 44px; }
-.cp-body { flex: 1; overflow-y: auto; padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px)); }
-.cp-id { display: flex; flex-direction: column; align-items: center; padding: 20px 16px 4px; }
-.cp-avatar { width: 96px; height: 96px; border-radius: 50%; object-fit: cover; background: #1e1e1e; box-shadow: 0 0 0 2px #fff; }
-.cp-avatar-fallback { width: 96px; height: 96px; border-radius: 50%; background: #fe2c55; color: #fff; font-size: 40px; font-weight: 800; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 0 2px #fff; }
-.cp-name { color: #fff; font-size: 18px; font-weight: 800; margin: 12px 0 2px; display: flex; align-items: center; gap: 4px; }
-.cp-handle { color: #fff; font-size: 14px; font-weight: 600; }
-.cp-stats { display: flex; justify-content: center; gap: 20px; padding: 14px 16px 4px; }
-.cp-stat { display: flex; align-items: center; gap: 4px; color: #8a8a8a; font-size: 13px; }
-.cp-stat b { color: #fff; font-size: 15px; font-weight: 800; }
-.cp-actions { display: flex; justify-content: center; gap: 8px; padding: 12px 16px 4px; }
-.cp-follow { background: #fe2c55; color: #fff; border: none; border-radius: 8px; padding: 10px 0; width: 180px; font-size: 15px; font-weight: 800; cursor: pointer; }
+.cp-centered { width: 100%; max-width: 42rem; margin: 0 auto; min-height: 100%; background: #121212; padding-bottom: 80px; }
+.cp-back { position: fixed; left: 8px; top: calc(8px + env(safe-area-inset-top, 0px)); z-index: 2; display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 44px; width: auto; padding: 0 16px 0 12px; border-radius: 9999px; background: rgba(0,0,0,.45); backdrop-filter: blur(8px); color: #fff; border: none; cursor: pointer; font-size: 14px; font-weight: 600; white-space: nowrap; }
+.cp-back .sx-back-arrow { color: #fe2c55; display: inline-flex; }
+.cp-head { display: flex; align-items: center; gap: 16px; text-align: left; }
+.cp-head-info { flex: 1; min-width: 0; }
+.cp-ring { flex: none; display: flex; align-items: center; justify-content: center; height: 72px; width: 72px; border-radius: 50%; background: conic-gradient(from 0deg, var(--color-primary, #fe2c55), #7B2AFF, var(--color-primary, #fe2c55)); padding: 3px; }
+@media (min-width: 1024px) { .cp-ring { height: 84px; width: 84px; } }
+.cp-ring-inner { width: 100%; height: 100%; border-radius: 50%; overflow: hidden; background: #121212; }
+.cp-ring-inner img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.cp-avatar-fallback { width: 100%; height: 100%; border-radius: 50%; background: #fe2c55; color: #fff; font-size: 28px; font-weight: 800; display: flex; align-items: center; justify-content: center; }
+.cp-body { padding: 20px 16px 12px; text-align: center; }
+@media (min-width: 1024px) { .cp-body { padding: 24px 32px 16px; } }
+.cp-name { color: #fff; font-size: 20px; line-height: 28px; font-weight: 700; margin: 4px 0 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cp-handle { color: #a0a0a0; font-size: 14px; margin-top: 2px; }
+@media (min-width: 1024px) { .cp-handle { font-size: 16px; } }
+.cp-actions { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 12px; }
+.cp-head .cp-actions { justify-content: flex-start; }
+.cp-share, .cp-follow { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 12px; font-size: 14px; font-weight: 600; min-height: 40px; border: none; cursor: pointer; }
+.cp-share svg, .cp-follow svg { width: 16px; height: 16px; }
+.cp-share { background: #1e1e1e; color: #fff; }
+.cp-share:hover { background: rgba(30,30,30,.8); }
+.cp-follow { background: #c9213f; color: #fff; }
+.cp-follow:hover { background: rgba(201,33,63,.9); }
 .cp-follow.following { background: #1e1e1e; color: #fff; border: 1px solid #2f2f2f; }
-.cp-bio { color: #e8e8e8; font-size: 13px; line-height: 1.5; margin: 10px auto 0; max-width: 340px; text-align: center; padding: 0 16px; }
-.cp-tabs { display: flex; border-bottom: 1px solid rgba(255, 255, 255, 0.08); margin-top: 14px; }
-.cp-tab { flex: 1; background: none; border: none; color: #8a8a8a; font-size: 13px; font-weight: 800; padding: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; }
-.cp-tab.on { color: #fff; box-shadow: inset 0 -2px 0 #fe2c55; }
-.cp-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; padding-top: 2px; }
-.cp-tile { position: relative; aspect-ratio: 3/4; background: #121212; border: none; padding: 0; cursor: pointer; overflow: hidden; }
-.cp-tile img { width: 100%; height: 100%; object-fit: cover; }
-.cp-tile-fallback { width: 100%; height: 100%; background: linear-gradient(135deg, #1e1e1e, #121212); display: flex; align-items: center; justify-content: center; color: #fe2c55; font-size: 24px; }
-.cp-tile-cap { position: absolute; left: 0; right: 0; bottom: 0; padding: 12px 6px 6px; background: linear-gradient(transparent, rgba(0, 0, 0, 0.8)); color: #fff; font-size: 11px; font-weight: 700; text-align: left; }
+.cp-display { color: #a0a0a0; font-size: 14px; margin-top: 2px; }
+.cp-stats { display: flex; align-items: flex-start; justify-content: space-between; gap: 4px; margin-top: 12px; }
+@media (min-width: 1024px) { .cp-stats { justify-content: flex-start; gap: 24px; margin-top: 16px; } }
+.cp-stat { display: flex; flex: 1; min-width: 0; flex-direction: column; align-items: center; }
+@media (min-width: 1024px) { .cp-stat { flex: none; flex-direction: row; align-items: baseline; gap: 4px; } }
+.cp-stat b { color: #fff; font-size: 15px; font-weight: 700; line-height: 1.2; }
+@media (min-width: 1024px) { .cp-stat b { font-size: 16px; } }
+.cp-stat span { color: #8a8a8a; font-size: 11px; line-height: 1.2; }
+@media (min-width: 1024px) { .cp-stat span { font-size: 14px; } }
+.cp-bio { color: #e8e8e8; font-size: 13px; line-height: 1.5; margin: 10px auto 0; max-width: 340px; }
+.cp-tags { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+@media (min-width: 1024px) { .cp-tags { justify-content: flex-start; margin-top: 12px; } }
+.cp-tagpill { display: inline-flex; align-items: center; padding: 2px 10px; border-radius: 9999px; background: rgba(255,255,255,.1); color: #a0a0a0; font-size: 12px; border: none; cursor: pointer; }
+.cp-tagpill:hover { background: rgba(255,255,255,.2); }
+.cp-videos { padding: 0 8px; }
+@media (min-width: 1024px) { .cp-videos { padding: 0 32px; } }
+.cp-videos-head { border-bottom: 1px solid #2f2f2f; margin-bottom: 16px; }
+.cp-videos-title { padding: 12px 8px; font-size: 14px; font-weight: 600; color: #fff; }
+.cp-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
+@media (min-width: 1024px) { .cp-grid { gap: 8px; } }
+.cp-tile { position: relative; aspect-ratio: 9/16; background: #1e1e1e; border-radius: 4px; overflow: hidden; border: none; padding: 0; cursor: pointer; }
+.cp-tile img { width: 100%; height: 100%; object-fit: cover; display: block; }
+/* Real video-frame thumbnails when poster_url is missing. */
+.cp-tile video { width: 100%; height: 100%; object-fit: cover; display: block; background: #000; pointer-events: none; }
+.cp-menu { position: fixed; right: 8px; top: calc(8px + env(safe-area-inset-top, 0px)); z-index: 2; display: inline-flex; align-items: center; justify-content: center; height: 44px; width: 44px; border-radius: 9999px; background: rgba(0,0,0,.45); backdrop-filter: blur(8px); color: #fff; border: none; cursor: pointer; }
+.cp-tile-fallback { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #1e1e1e, #121212); color: #fe2c55; font-size: 24px; }
+.cp-tile-cap { position: absolute; left: 4px; right: 4px; bottom: 4px; display: flex; align-items: center; justify-content: space-between; color: #fff; font-size: 12px; text-shadow: 0 1px 3px rgba(0,0,0,.8); }
+.cp-tile-cap span { display: inline-flex; align-items: center; gap: 4px; }
+.cp-tile-cap svg { width: 14px; height: 14px; }
 .cp-empty { color: #8a8a8a; font-size: 14px; text-align: center; padding: 32px 0; grid-column: 1/-1; }
+
+/* --- /creators/ folder cards (1:1 NudiTok /creators, measured from refs/creators:
+ * grid 2/sm:3/lg:4 cols gap-4; card p-4 rounded-lg bg-surface-elevated; avatar
+ * h-14 w-14 rounded-full; name text-sm semibold max-w-120px; handle/stats
+ * text-xs; stats horizontal row gap-3 mt-1) --- */
+.sx-cr-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; align-content: start; }
+@media (min-width: 640px) { .sx-cr-grid { grid-template-columns: repeat(3, 1fr); } }
+@media (min-width: 1024px) { .sx-cr-grid { grid-template-columns: repeat(4, 1fr); } }
+.sx-cr-card { display: flex; flex-direction: column; align-items: center; gap: 8px; background: #1e1e1e; border-radius: 8px; padding: 16px; text-decoration: none; color: #fff; min-width: 0; transition: background-color .15s ease; }
+.sx-cr-card:hover { background: #2a2a2a; }
+.sx-cr-avatar { position: relative; display: flex; flex: none; width: 56px; height: 56px; border-radius: 50%; overflow: hidden; background: #fe2c55; }
+.sx-cr-avatar img { width: 100%; height: 100%; aspect-ratio: 1; object-fit: cover; display: block; }
+.sx-cr-avatar-fallback { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 22px; font-weight: 800; }
+.sx-cr-name { font-size: 14px; font-weight: 600; text-align: center; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sx-cr-handle { color: #a0a0a0; font-size: 12px; text-align: center; margin-top: -4px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sx-cr-stats { display: flex; gap: 12px; margin-top: 4px; font-size: 12px; color: #8a8a8a; text-align: center; }
+.sx-cr-stats b { color: #fff; font-weight: 600; }

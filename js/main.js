@@ -14,9 +14,14 @@ import { makeToast } from "./lib/dom.js";
 
 const FEATURES = [
   "player",
+  "swipe",
+  "ads",
   "creator",
   "creator-page",
+  "guide",
+  "prefs",
   "auth",
+  "telemetry",
   "likes",
   "follow",
   "save",
@@ -27,6 +32,7 @@ const FEATURES = [
   "trending",
   "mute",
   "share",
+  "video-title",
   "chrome",
   "nav",
   "progress",
@@ -55,7 +61,9 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // 0. PWA shortcut deep links (?feed=...) — same behavior as before split
   try {
-    const deepFeed = new URLSearchParams(location.search).get("feed");
+    const params = new URLSearchParams(location.search);
+    const deepFeed = params.get("feed");
+    const deepPrefs = params.get("prefs");
     if (deepFeed === "foryou" || deepFeed === "trending") {
       setFeedMode(deepFeed === "trending" ? "top" : "foryou");
       const u = new URL(location.href);
@@ -72,6 +80,17 @@ document.addEventListener("DOMContentLoaded", async () => {
       window.__sxPendingSavedOverlay = true;
       try {
         history.replaceState(null, "", location.pathname);
+      } catch (e) {}
+    }
+    // Side-menu Preferences from folder pages (?prefs=1): strip the param
+    // now, open the popup after features boot below.
+    let wantsPrefs = false;
+    if (deepPrefs === "1") {
+      wantsPrefs = true;
+      try {
+        const u = new URL(location.href);
+        u.searchParams.delete("prefs");
+        history.replaceState(null, "", u.pathname + u.search + u.hash);
       } catch (e) {}
     }
   } catch (e) {
@@ -116,6 +135,11 @@ document.addEventListener("DOMContentLoaded", async () => {
       } catch (err) {}
     }
   });
+  if (wantsPrefs) {
+    try {
+      if (window.sxOpenPrefs) window.sxOpenPrefs(true);
+    } catch (e) {}
+  }
   await load;
 
   // Keep feed mode import referenced (deep links above use it)
