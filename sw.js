@@ -109,12 +109,16 @@ self.addEventListener("fetch", (event) => {
   if (req.headers.has("range")) return;
 
   // Navigations: network first, offline falls back to cached shell.
+  // Only cache successful responses — never poison the fallback with
+  // an error page.
   if (req.mode === "navigate") {
     event.respondWith(
       fetch(req)
         .then((res) => {
-          const copy = res.clone();
-          caches.open(CACHE).then((cache) => cache.put("/index.html", copy)).catch(() => {});
+          if (res && res.ok) {
+            const copy = res.clone();
+            caches.open(CACHE).then((cache) => cache.put("/index.html", copy)).catch(() => {});
+          }
           return res;
         })
         .catch(() => caches.match("/index.html")),
