@@ -185,8 +185,28 @@ export async function init(ctx) {
   // expired CDN link) must never strand the feed on black. Skip to the
   // next video; give up with a message after several consecutive failures.
   let errSkips = 0;
+  // Stall watchdog: a source that never yields its first frame (trickling
+  // socket, throttled host) fires no error — without this the feed sits on
+  // black + spinner forever. Armed at loadstart, disarmed at first frame;
+  // on timeout the synthetic error flows through the skip logic above.
+  let stallTimer = 0;
+  let stallArmed = false;
+  const clearStall = () => {
+    stallArmed = false;
+    if (stallTimer) { try { clearTimeout(stallTimer); } catch (e) {} stallTimer = null; }
+  };
+  const armStall = () => {
+    if (!stallArmed) return;
+    if (stallTimer) { try { clearTimeout(stallTimer); } catch (e) {} }
+    stallTimer = setTimeout(() => {
+      stallTimer = null;
+      try {
+        if (stallArmed) video.dispatchEvent(new Event("error"));
+      } catch (e) {}
+    }, 25000);
+  };
   const toast = (ctx && ctx.toast) || (() => {});
-  video.addEventListener("playing", () => { errSkips = 0; hideLoader(); });
+  video.addEventListener("playing", () => { errSkips = 0; clearStall(); hideLoader(); });
   video.addEventListener("error", () => {
     try {
       errSkips++;
@@ -201,9 +221,10 @@ export async function init(ctx) {
       else { hideLoader(); toast("Videos won't load — check your connection"); }
     } catch (e) {}
   });
-  video.addEventListener("canplay", hideLoader);
-  video.addEventListener("waiting", showLoader);
-  video.addEventListener("loadstart", showLoader);
+  video.addEventListener("canplay", () => { clearStall(); hideLoader(); });
+  video.addEventListener("waiting", () => { armStall(); showLoader(); });
+  video.addEventListener("stalled", () => { armStall(); showLoader(); });
+  video.addEventListener("loadstart", () => { stallArmed = true; armStall(); showLoader(); });
   // Single-shot boot play is owned by swipe.js now (it needs the pool
   // first). Fallback: if swipe never boots (no pool), play rotation head.
   window.addEventListener("sx:videos-ready", () => {
