@@ -295,6 +295,115 @@ function preloadNextVideo() {
 }
 
 /**
+ * Maps one plain video doc ({direct_url, ...}) to a pool entry.
+ * Returns null when there is no playable URL. Shared by the SDK path
+ * and the REST fallback below so both produce identical entries.
+ */
+function toVideoObject(id, data) {
+  if (!data || !data.direct_url) return null;
+  const who = resolveCreator(data, id);
+  let createdAtMillis = 0;
+  const ts = data.created_at || data.createdAt;
+  if (ts && typeof ts.toMillis === "function") {
+    try {
+      createdAtMillis = ts.toMillis();
+    } catch (e) {}
+  } else if (ts && typeof ts._seconds === "number") {
+    createdAtMillis = ts._seconds * 1000;
+  } else if (typeof ts === "string") {
+    const p = Date.parse(ts);
+    if (!isNaN(p)) createdAtMillis = p;
+  }
+  return {
+    id,
+    url: data.direct_url,
+    // Populated once the admin dashboard's transcodeVideo Cloud
+    // Function has processed this video. Only trust hlsUrl for
+    // adaptive playback when status is explicitly "ready" - a
+    // video mid-transcode (or one that failed) still has a
+    // perfectly playable `url` (direct_url) to fall back to.
+    hlsUrl: data.status === 'ready' ? data.hls_url || null : null,
+    posterUrl: data.poster_url || null,
+    views: typeof data.views === 'number' ? data.views : 0,
+    likes: typeof data.likes === 'number' ? data.likes : 0,
+    creator: who.name,
+    creatorLinked: who.linked,
+    creatorCategory: who.creatorCategory || null,
+    avatarUrl: who.avatarUrl,
+    // Optional Session-A fields (captionAI / Upload page). Absent on
+    // legacy docs — every consumer must tolerate missing values.
+    category: typeof data.category === 'string' ? data.category : null,
+    caption: typeof data.caption === 'string' ? data.caption : null,
+    hashtags: Array.isArray(data.hashtags) ? data.hashtags.filter((t) => typeof t === 'string' && t) : [],
+    createdAtMillis,
+  };
+}
+
+// --- REST fallback unwrappers (Firestore REST wraps every value in a
+// typed envelope: {stringValue}, {integerValue: "5"}, {booleanValue}, ...).
+const restStr = (f) => (f && typeof f.stringValue === "string" ? f.stringValue : null);
+const restBool = (f) => !!(f && (f.booleanValue === true || f.booleanValue === "true"));
+const restNum = (f) => {
+  if (!f) return 0;
+  if (typeof f.integerValue !== "undefined") {
+    const n = parseInt(f.integerValue, 10);
+    return isNaN(n) ? 0 : n;
+  }
+  if (typeof f.doubleValue !== "undefined") return Number(f.doubleValue) || 0;
+  return 0;
+};
+
+/**
+ * Plain-HTTPS fallback for the videos list. Used only when the Firestore
+ * SDK path yields nothing (offline mode / blocked watch stream): the SDK
+ * needs a persistent stream, plain fetch does not, so proxies that kill
+ * long-lived streams can still serve this. Returns pool entries (same
+ * shape as the SDK path) or [].
+ */
+async function loadVideosViaRest() {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => { try { ctrl.abort(); } catch (e) {} }, 15000);
+  try {
+    const url =
+      "https://firestore.googleapis.com/v1/projects/" + firebaseConfig.projectId +
+      "/databases/(default)/documents/videos?pageSize=200&key=" + firebaseConfig.apiKey;
+    const res = await fetch(url, { signal: ctrl.signal });
+    if (!res || !res.ok) return [];
+    const json = await res.json();
+    const docs = json && Array.isArray(json.documents) ? json.documents : [];
+    const out = [];
+    for (const d of docs) {
+      try {
+        const f = d.fields || {};
+        if (!restBool(f.is_active)) continue;
+        const tags = f.hashtags && Array.isArray(f.hashtags.arrayValue && f.hashtags.arrayValue.values)
+          ? f.hashtags.arrayValue.values.map((t) => (t && t.stringValue) || "").filter(Boolean)
+          : [];
+        const v = toVideoObject(String((d.name || "").split("/").pop() || ""), {
+          direct_url: restStr(f.direct_url),
+          hls_url: restStr(f.hls_url),
+          poster_url: restStr(f.poster_url),
+          status: restStr(f.status),
+          views: restNum(f.views),
+          likes: restNum(f.likes),
+          creatorId: restStr(f.creatorId),
+          category: restStr(f.category),
+          caption: restStr(f.caption),
+          hashtags: tags,
+          created_at: restStr(f.created_at) || restStr(f.createdAt),
+        });
+        if (v) out.push(v);
+      } catch (e) {}
+    }
+    return out;
+  } catch (e) {
+    return [];
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/**
  * Fetches all active videos from Firestore, restores playback state, and
  * orders them per the active feed mode.
  */
@@ -313,46 +422,17 @@ export async function loadVideosFromFirestore() {
 
     let rawVideos = [];
     querySnapshot.forEach((docSnap) => {
-      const data = docSnap.data();
-      if (data.direct_url) {
-        const who = resolveCreator(data, docSnap.id);
-        let createdAtMillis = 0;
-        const ts = data.created_at || data.createdAt;
-        if (ts && typeof ts.toMillis === "function") {
-          try {
-            createdAtMillis = ts.toMillis();
-          } catch (e) {}
-        } else if (ts && typeof ts._seconds === "number") {
-          createdAtMillis = ts._seconds * 1000;
-        } else if (typeof ts === "string") {
-          const p = Date.parse(ts);
-          if (!isNaN(p)) createdAtMillis = p;
-        }
-        rawVideos.push({
-          id: docSnap.id,
-          url: data.direct_url,
-          // Populated once the admin dashboard's transcodeVideo Cloud
-          // Function has processed this video. Only trust hlsUrl for
-          // adaptive playback when status is explicitly "ready" - a
-          // video mid-transcode (or one that failed) still has a
-          // perfectly playable `url` (direct_url) to fall back to.
-          hlsUrl: data.status === 'ready' ? data.hls_url || null : null,
-          posterUrl: data.poster_url || null,
-          views: typeof data.views === 'number' ? data.views : 0,
-          likes: typeof data.likes === 'number' ? data.likes : 0,
-          creator: who.name,
-          creatorLinked: who.linked,
-          creatorCategory: who.creatorCategory || null,
-          avatarUrl: who.avatarUrl,
-          // Optional Session-A fields (captionAI / Upload page). Absent on
-          // legacy docs — every consumer must tolerate missing values.
-          category: typeof data.category === 'string' ? data.category : null,
-          caption: typeof data.caption === 'string' ? data.caption : null,
-          hashtags: Array.isArray(data.hashtags) ? data.hashtags.filter((t) => typeof t === 'string' && t) : [],
-          createdAtMillis,
-        });
-      }
+      const v = toVideoObject(docSnap.id, docSnap.data());
+      if (v) rawVideos.push(v);
     });
+
+    // SDK yielded nothing (offline mode / blocked stream): one plain-HTTPS
+    // attempt before giving up. No-op cost on the normal path.
+    if (rawVideos.length === 0) {
+      try {
+        rawVideos = await loadVideosViaRest();
+      } catch (e) {}
+    }
 
     if (rawVideos.length === 0) {
       console.warn("No active videos found in Firestore.");
