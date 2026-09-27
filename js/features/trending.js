@@ -99,10 +99,6 @@ function paintGrid() {
         img.addEventListener("loadeddata", clear);
         img.addEventListener("error", clear);
         setTimeout(clear, 4000);
-      } else if (img.classList.contains("sx-thumbimg") && !img.dataset.done) {
-        // Real frame still being captured — keep shimmer; hydrate clears it.
-        img.addEventListener("error", clear);
-        setTimeout(clear, 8000);
       } else if (img.complete) clear();
       else {
         img.addEventListener("load", clear);

@@ -51,7 +51,7 @@
 .cp-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
 @media (min-width: 1024px) { .cp-grid { gap: 8px; } }
 .cp-tile { position: relative; aspect-ratio: 9/16; background: #1e1e1e; border-radius: 4px; overflow: hidden; border: none; padding: 0; cursor: pointer; }
-.cp-tile img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.cp-tile img, .cp-tile video { width: 100%; height: 100%; object-fit: cover; display: block; }
 /* Real video-frame thumbnails when poster_url is missing. */
 .cp-tile video { width: 100%; height: 100%; object-fit: cover; display: block; background: #000; pointer-events: none; }
 .cp-menu { position: fixed; right: 8px; top: calc(8px + env(safe-area-inset-top, 0px)); z-index: 2; display: inline-flex; align-items: center; justify-content: center; height: 44px; width: 44px; border-radius: 9999px; background: rgba(0,0,0,.45); backdrop-filter: blur(8px); color: #fff; border: none; cursor: pointer; }

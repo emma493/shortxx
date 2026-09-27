@@ -86,9 +86,8 @@ export function playVideoData(videoElement, videoData) {
   }
 
   const hlsUrl = !isLegacyString ? videoData.hlsUrl : null;
-  // Thumbnail-first: poster_url wins, else the already-cached grid frame
-  // (zero new downloads), so the user sees a thumbnail + loader instead of
-  // black while the video gets ready.
+  // Poster first: poster_url wins when set, so the user sees a thumbnail
+  // + loader instead of black while the video gets ready.
   let posterUrl = !isLegacyString ? videoData.posterUrl : null;
   if (!posterUrl && !isLegacyString) {
     try { posterUrl = getCachedThumb(videoData); } catch (e) {}

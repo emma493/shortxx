@@ -59,7 +59,7 @@
 .sx-d-card img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transition: transform .2s ease; }
 .sx-d-card video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; background: #000; pointer-events: none; }
 .sx-thumb-fallback { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
-.sx-d-card:hover img { transform: scale(1.05); }
+.sx-d-card:hover img, .sx-d-card:hover video { transform: scale(1.05); }
 .sx-d-card-fallback { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #1e1e1e, #121212); color: #fe2c55; font-size: 28px; font-weight: 800; }
 .sx-d-card-meta { position: absolute; left: 0; right: 0; bottom: 0; padding: 24px 8px 8px; background: linear-gradient(to top, rgba(0,0,0,.85), rgba(0,0,0,.45), transparent); }
 .sx-d-card-name { display: block; color: #fff; font-size: 14px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
