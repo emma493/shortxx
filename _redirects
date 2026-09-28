@@ -17,57 +17,8 @@
 /creator/  /creator/index.html  200
 /@*  /creator/index.html  200
 
-# BEGIN GENERATED CREATOR SLASH REDIRECTS
-/creator/abigailscott /creator/abigailscott/ 301
-/creator/AbigailStar /creator/AbigailStar/ 301
-/creator/alice-wild /creator/alice-wild/ 301
-/creator/alicemorgan /creator/alicemorgan/ 301
-/creator/AmeliaDawn /creator/AmeliaDawn/ 301
-/creator/annacarter /creator/annacarter/ 301
-/creator/aurelia /creator/aurelia/ 301
-/creator/AvaRose /creator/AvaRose/ 301
-/creator/baggz /creator/baggz/ 301
-/creator/blushrush /creator/blushrush/ 301
-/creator/CharlotteSky /creator/CharlotteSky/ 301
-/creator/ChloeKate /creator/ChloeKate/ 301
-/creator/cute-boob /creator/cute-boob/ 301
-/creator/drakerose /creator/drakerose/ 301
-/creator/EllaJune /creator/EllaJune/ 301
-/creator/ellie-nova /creator/ellie-nova/ 301
-/creator/EmilyBloom /creator/EmilyBloom/ 301
-/creator/EmmaBelle /creator/EmmaBelle/ 301
-/creator/emmyelfie /creator/emmyelfie/ 301
-/creator/EvaBragg /creator/EvaBragg/ 301
-/creator/EvelynRose /creator/EvelynRose/ 301
-/creator/gina /creator/gina/ 301
-/creator/GraceLynn /creator/GraceLynn/ 301
-/creator/HarperLee /creator/HarperLee/ 301
-/creator/horney69 /creator/horney69/ 301
-/creator/IsabellaJoy /creator/IsabellaJoy/ 301
-/creator/ivyginger /creator/ivyginger/ 301
-/creator/izzaizza /creator/izzaizza/ 301
-/creator/kavali /creator/kavali/ 301
-/creator/kira /creator/kira/ 301
-/creator/LaylaJo /creator/LaylaJo/ 301
-/creator/LilyGrace /creator/LilyGrace/ 301
-/creator/LilyPearl /creator/LilyPearl/ 301
-/creator/linda /creator/linda/ 301
-/creator/lisa-ann /creator/lisa-ann/ 301
-/creator/lisascott /creator/lisascott/ 301
-/creator/lisascotty /creator/lisascotty/ 301
-/creator/lockleaks /creator/lockleaks/ 301
-/creator/lulu2210 /creator/lulu2210/ 301
-/creator/MiaHope /creator/MiaHope/ 301
-/creator/Miamiaxof /creator/Miamiaxof/ 301
-/creator/muneeba /creator/muneeba/ 301
-/creator/NoraJane /creator/NoraJane/ 301
-/creator/PenelopeSue /creator/PenelopeSue/ 301
-/creator/RileyQuinn /creator/RileyQuinn/ 301
-/creator/sarah /creator/sarah/ 301
-/creator/ScarlettRay /creator/ScarlettRay/ 301
-/creator/silk_mist /creator/silk_mist/ 301
-/creator/SophiaMae /creator/SophiaMae/ 301
-/creator/sweethana /creator/sweethana/ 301
-/creator/yuuy /creator/yuuy/ 301
-/creator/ZoeyAnn /creator/ZoeyAnn/ 301
-# END GENERATED CREATOR SLASH REDIRECTS
+# NOTE: no per-creator slash 301s here on purpose. Every creator has a real
+# static folder (tools/generate-creator-pages.mjs) so the platform adds the
+# trailing slash natively. Generated /creator/<name> -> /creator/<name>/ 301s
+# were removed: Cloudflare's validator rejects some as infinite loops
+# (code 100324) and fails the ENTIRE deploy.

@@ -24,12 +24,9 @@ import { fileURLToPath } from "node:url";
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 const TEMPLATE = join(ROOT, "creator", "index.html");
 const SITEMAP = join(ROOT, "sitemap.xml");
-const REDIRECTS = join(ROOT, "_redirects");
 const CREATOR_DIR = join(ROOT, "creator");
 const SITE = "https://shortxx.live";
 const VALID = /^[\w-]+$/;
-const BLOCK_START = "# BEGIN GENERATED CREATOR SLASH REDIRECTS";
-const BLOCK_END = "# END GENERATED CREATOR SLASH REDIRECTS";
 
 function profileUrl(name) {
   return `${SITE}/creator/${encodeURIComponent(name)}/`;
@@ -143,24 +140,9 @@ if (prune) {
 
 console.log(`[gen] creators: ${wanted.size}, files written: ${written}, pruned: ${pruned}`);
 
-// No-slash 301s: /creator/<name> -> /creator/<name>/ so typed/shared links
-// without the trailing slash land on the canonical folder URL. Hand-written
-// rules outside the marked block are preserved; the block is regenerated
-// (and pruned) on every run.
-{
-  const lines = [...wanted.keys()]
-    .sort((a, b) => a.localeCompare(b))
-    .map((n) => `/creator/${encodeURIComponent(n)} /creator/${encodeURIComponent(n)}/ 301`);
-  const block = [BLOCK_START, ...lines, BLOCK_END].join("\n");
-  let prev = readFileSync(REDIRECTS, "utf8").replace(/\r\n/g, "\n");
-  const re = new RegExp(`${BLOCK_START}\n[\\s\\S]*?\n${BLOCK_END}\n?`, "m");
-  const next = re.test(prev)
-    ? prev.replace(re, `${block}\n`)
-    : `${prev.replace(/\n+$/, "\n")}\n${block}\n`;
-  if (next !== prev) {
-    writeFileSync(REDIRECTS, next);
-    console.log(`[gen] _redirects: slash-redirect block updated (${lines.length} rules)`);
-  } else {
-    console.log("[gen] _redirects: slash-redirect block up to date");
-  }
-}
+// No-slash handling is intentionally left to the platform: every creator has
+// a real static folder, so /creator/<name> gets its trailing slash natively.
+// (A generated /creator/<name> -> /creator/<name>/ 301 block used to live in
+// _redirects, but Cloudflare's validator rejects some entries as infinite
+// loops [code 100324] and fails the ENTIRE deploy — so nothing is written.)
+console.log("[gen] _redirects: slash-redirect block intentionally skipped (platform normalizes)");
