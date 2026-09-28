@@ -1,4 +1,4 @@
-import { creatorFor, formatCount, getAllVideos, loadVideosFromFirestore } from "../../vid.js";
+import { creatorFor, ensurePoolSize, formatCount, getAllVideos, loadVideosFromFirestore } from "../../vid.js";
 import { esc } from "../lib/dom.js";
 import { bootAuth } from "../lib/auth-boot.js";
 
@@ -37,6 +37,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (!grid) return;
 
   function paint() {
+    // Bulk-fill in the background: loadVideosFromFirestore() only fetches
+    // the first video (FIRST_PAGE_SIZE=1), so without this the grid can only
+    // ever show 1 creator. Grids repaint via sx:videos-ready as pages land.
+    try { void ensurePoolSize(300); } catch (e) {}
     const map = new Map();
     getAllVideos().forEach((v) => {
       // Fall back to stable pseudonym so unlinked videos still group
@@ -94,6 +98,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   paint();
+  window.addEventListener("sx:videos-ready", paint);
   try { await loadVideosFromFirestore(); } catch (e) {}
+  paint();
+  try { await ensurePoolSize(300); } catch (e) {}
   paint();
 });
