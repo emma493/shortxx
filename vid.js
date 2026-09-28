@@ -85,11 +85,11 @@ let preloaderElement = null;
 // Append-only after boot: swipe windows are index-keyed, so existing
 // entries never move — new pages concatenate at the end.
 let allRawVideos = [];
-// Paged feed: the pool fills one video at a time (first video paints +
-// plays immediately, the next is fetched as you watch). Single-doc pages
-// keep every request tiny on slow links. Grids bulk-fill via
-// ensurePoolSize below.
-const FIRST_PAGE_SIZE = 1;
+// Paged feed: boot fetches a small batch in one round trip and shuffles
+// it, so the first video is random every visit instead of always the same
+// doc. After boot the pool keeps growing one video at a time as you swipe.
+// Grids bulk-fill via ensurePoolSize below.
+const FIRST_PAGE_SIZE = 24;
 const MAX_PAGE_SIZE = 48;
 let pageCursor = null;
 let morePages = true;
