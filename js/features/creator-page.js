@@ -240,10 +240,9 @@ export async function init(ctx) {
   });
   window.sxCloseCreator = close;
 
-  // Profile-pic + @username taps -> folder-style /creator/<name>/ profile
-  // (a real folder, works on any static host with no rewrites; legacy /@name
-  // still resolves as an alias). Delegated so it also covers
-  // nodes painted after init.
+  // Profile-pic + @username taps -> /@name alias (works for EVERY Firestore
+  // username via the /@* rewrite; /creator/<name>/ folders exist only for
+  // sitemap creators). Delegated so it also covers nodes painted after init.
   document.addEventListener("click", (e) => {
     const el = e.target && e.target.closest ? e.target.closest("[data-creator]") : null;
     if (!el || !document.contains(el)) return;
@@ -251,7 +250,7 @@ export async function init(ctx) {
     if (!creator) return;
     e.preventDefault();
     e.stopPropagation();
-    location.href = "/creator/" + encodeURIComponent(creator) + "/";
+    location.href = "/@" + encodeURIComponent(creator);
   });
   window.addEventListener("sx:video-changed", () => {
     if (root.style.display !== "none") paint(toast);

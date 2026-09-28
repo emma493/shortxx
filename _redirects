@@ -53,9 +53,3 @@
 /creator/SophiaMae /creator/SophiaMae/ 301
 /creator/ZoeyAnn /creator/ZoeyAnn/ 301
 # END GENERATED CREATOR SLASH REDIRECTS
-
-# Any other /creator/<name>/ serves the dynamic shell — creator-page.js
-# resolves any Firestore username client-side. Placed after the generated
-# block so known creators keep their canonical slash 301s; static folders
-# always take precedence over this splat on both hosts.
-/creator/*  /creator/index.html  200
