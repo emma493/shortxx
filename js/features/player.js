@@ -14,6 +14,26 @@ let currentVideoDirectUrl = "";
 let lastViewedId = null;
 let loaderEl = null;
 
+/* hls.js loads on demand (never in <head>): no current videos need it, so
+ * its ~150KB stays off the critical path until an HLS manifest appears. */
+function ensureHlsJs() {
+  if (window.Hls) return Promise.resolve(true);
+  if (ensureHlsJs.p) return ensureHlsJs.p;
+  ensureHlsJs.p = new Promise((resolve, reject) => {
+    try {
+      const s = document.createElement("script");
+      s.src = "https://cdnjs.cloudflare.com/ajax/libs/hls.js/1.5.17/hls.min.js";
+      s.async = true;
+      s.onload = () => resolve(true);
+      s.onerror = () => reject(new Error("hls load failed"));
+      document.head.appendChild(s);
+    } catch (e) {
+      reject(e);
+    }
+  });
+  return ensureHlsJs.p;
+}
+
 function showLoader() {
   if (!loaderEl) {
     try { loaderEl = document.getElementById("sx-loader"); } catch (e) {}
@@ -111,6 +131,25 @@ export function playVideoData(videoElement, videoData) {
 
   const canUseHlsJs = hlsUrl && window.Hls && window.Hls.isSupported();
   const canUseNativeHls = hlsUrl && videoElement.canPlayType("application/vnd.apple.mpegurl");
+
+  // HLS library not here yet: play direct NOW (test.html parity), upgrade
+  // to adaptive if it arrives while this video is still current.
+  if (hlsUrl && !window.Hls) {
+    videoElement.src = currentVideoDirectUrl;
+    try { videoElement.dataset.sxUrl = currentVideoDirectUrl; } catch (e) {}
+    videoElement.load();
+    attemptPlay();
+    ensureHlsJs().then(() => {
+      try {
+        if (videoElement.dataset && videoElement.dataset.sxUrl !== currentVideoDirectUrl) return;
+        if (!window.Hls || !window.Hls.isSupported() || activeHls) return;
+        activeHls = new window.Hls({ maxBufferLength: 15, startLevel: -1 });
+        activeHls.loadSource(hlsUrl);
+        activeHls.attachMedia(videoElement);
+      } catch (e) {}
+    }).catch(() => {});
+    return videoData;
+  }
 
   if (canUseHlsJs) {
     activeHls = new window.Hls({ maxBufferLength: 15, startLevel: -1 });

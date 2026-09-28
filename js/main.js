@@ -204,7 +204,24 @@ document.addEventListener("DOMContentLoaded", async () => {
     report("swipe", e);
   }
 
-  // 3. Load ALL remaining features in parallel — order-independent by design
+  // 3. Secondary features wait for the first played frame (or 15s), so
+  // boot bandwidth belongs to the video alone — test.html parity. They
+  // sync via store + sx:* events, so late init is lossless.
+  const waitFirstFrame = new Promise((resolve) => {
+    let done = false;
+    const go = () => { if (!done) { done = true; resolve(); } };
+    try {
+      const v = document.getElementById("main-video");
+      if (v) {
+        v.addEventListener("playing", go, { once: true });
+        if (!v.paused && v.readyState >= 2) { go(); return; }
+      }
+    } catch (e) {}
+    setTimeout(go, 15000);
+  });
+  await waitFirstFrame;
+
+  // 4. Load ALL remaining features in parallel — order-independent by design
   // (they sync via store + sx:* window events, never direct imports).
   const loadFeature = async (name) => {
     const mod = await withTimeout(
