@@ -36,6 +36,13 @@
         log("video ERROR: code=" + (e && e.code) + " message=" + (e && e.message), "bad");
       });
       var t0 = Date.now();
+      var params = new URLSearchParams(location.search);
+      var forced = params.get("u");
+      if (forced) {
+        log("manual url override", "ok");
+        playUrl("manual", forced);
+        return;
+      }
       log("fetching video list...");
       fetch("https://firestore.googleapis.com/v1/projects/shortxx-live/databases/(default)/documents/videos?pageSize=5&key=AIzaSyBQoIKWaWPKg8luwCjpN8LPaTd-43A1Vqo")
         .then(function (res) {
@@ -56,18 +63,20 @@
             }
           }
           if (!pick) { log("no active video with direct_url found", "bad"); return; }
-          log("picked id=" + pick.id, "ok");
-          log("url=" + pick.url, "");
-          var t1 = Date.now();
-          video.src = pick.url;
-          video.load();
-          var p = video.play();
-          if (p && p.catch) p.catch(function (e) { log("play() rejected: " + e, "bad"); });
-          log("src set, play() called", "ok");
+          playUrl(pick.id, pick.url);
         })
         .catch(function (e) {
           log("FETCH FAILED: " + (e && e.message), "bad");
         });
+      function playUrl(id, url) {
+          log("picked id=" + id, "ok");
+          log("url=" + url, "");
+          video.src = url;
+          video.load();
+          var p = video.play();
+          if (p && p.catch) p.catch(function (e) { log("play() rejected: " + e, "bad"); });
+          log("src set, play() called", "ok");
+      }
     })();
   </script>
 </body>
