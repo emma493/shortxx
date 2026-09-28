@@ -6,8 +6,9 @@ import { thumbHTML, hydrateThumbVideos, registerVideos } from "../lib/thumb.js";
 import { attachMenuClone } from "../lib/side-menu.js";
 
 /* js/features/creator-page.js — 1:1 NudiTok profile page (refs/profile page).
- * Opens when the feed avatar or @username ([data-creator]) is tapped:
- * ring avatar beside the handle, Share + Follow pills, display
+ * In-feed overlay panel (opened programmatically); feed avatar + @username
+ * are plain links to /creator/<name>/ static pages and navigate directly.
+ * Overlay: ring avatar beside the handle, Share + Follow pills, display
  * name, 5-stat row (Posts/Followers/Following/Likes/Views), hashtag
  * pills, Videos header, 3-col 9/16 grid with play + heart counts. */
 
@@ -240,18 +241,10 @@ export async function init(ctx) {
   });
   window.sxCloseCreator = close;
 
-  // Profile-pic + @username taps -> /@name alias (works for EVERY Firestore
-  // username via the /@* rewrite; /creator/<name>/ folders exist only for
-  // sitemap creators). Delegated so it also covers nodes painted after init.
-  document.addEventListener("click", (e) => {
-    const el = e.target && e.target.closest ? e.target.closest("[data-creator]") : null;
-    if (!el || !document.contains(el)) return;
-    const { creator } = store;
-    if (!creator) return;
-    e.preventDefault();
-    e.stopPropagation();
-    location.href = "/@" + encodeURIComponent(creator);
-  });
+  // NOTE: feed avatar + @username are plain <a href="/creator/<name>/">
+  // links (set per video in js/features/creator.js) pointing at static
+  // profile folders — no JS navigation here, so taps can never hit a
+  // redirect loop. This delegated listener is intentionally gone.
   window.addEventListener("sx:video-changed", () => {
     if (root.style.display !== "none") paint(toast);
   });

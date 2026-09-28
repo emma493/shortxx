@@ -143,9 +143,9 @@ document.addEventListener("DOMContentLoaded", async () => {
       const initial = (c.display || c.name || "?").slice(0, 1).toUpperCase();
       const card = document.createElement("a");
       card.className = "sx-cr-card";
-      // /@ alias: resolves every Firestore username (folders exist only
-      // for sitemap creators).
-      card.href = "/@" + encodeURIComponent(c.name);
+      // Plain href to the static profile folder (generated per creator by
+      // tools/generate-creator-pages.mjs) — no /@ alias, no JS navigation.
+      card.href = "/creator/" + encodeURIComponent(c.name) + "/";
       card.setAttribute("aria-label", "@" + c.name + " - " + c.count + " videos");
       card.innerHTML =
         '<span class="sx-cr-avatar">' +

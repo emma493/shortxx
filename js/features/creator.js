@@ -22,6 +22,7 @@ function showInitial(avatarEl, initialEl) {
 
 export async function init() {
   const profileBlock = document.querySelector(".creator-profile");
+  const avatarLink = document.querySelector(".creator-profile a[data-creator]");
   const userLink = document.querySelector(".creator-link");
   const userNameElement = document.querySelector(".dynamic-username");
   const avatarEl = document.querySelector(".creator-avatar");
@@ -96,6 +97,14 @@ export async function init() {
     if (userLink) userLink.style.display = linkedCreator ? "" : "none";
     if (linkedCreator) {
       if (userNameElement) userNameElement.textContent = creator;
+      // Plain hrefs to the static profile page — no JS navigation, so the
+      // tap can never land in a redirect loop. Folders are generated per
+      // creator by tools/generate-creator-pages.mjs.
+      try {
+        const url = "/creator/" + encodeURIComponent(creator) + "/";
+        if (avatarLink) avatarLink.setAttribute("href", url);
+        if (userLink) userLink.setAttribute("href", url);
+      } catch (e) {}
       if (current && current.avatarUrl && avatarEl) {
         avatarEl.onerror = () => showInitial(avatarEl, avatarInitial);
         avatarEl.src = current.avatarUrl;
