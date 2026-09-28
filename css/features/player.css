@@ -1,6 +1,22 @@
 /* css/features/player.css — phone fills the screen (cover, TikTok-style);
  * wide screens letterbox (contain) so the video never stretches wide.
- * The column stays phone-width (max 480px) on desktop. */
+ * The column stays phone-width (max 480px) on desktop.
+ *
+ * STATIC STAGE: the player lives in the boot section and NEVER moves
+ * (reparenting hid video on some devices). The boot screen sticks while
+ * transparent spacer sections scroll beneath it; activation only swaps the
+ * video source, like a plain inline <video>. Below every overlay (min
+ * overlay z is 40+), above page content. */
+.snap-feed > [data-boot] {
+  position: sticky;
+  top: 0;
+  height: 100dvh;
+  z-index: 20;
+}
+.snap-feed .sx-spacer {
+  pointer-events: none;
+  background: transparent;
+}
 .sx-tile-fallback { color: #fe2c55; }
 #main-video,
 .sx-video {

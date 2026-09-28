@@ -1,18 +1,12 @@
 import { getAllVideos, requestMoreVideos, hasMoreVideos } from "../../vid.js";
-import { esc } from "../lib/dom.js";
-import { getCachedThumb } from "../lib/thumb.js";
 import { activateVideo, playVideoAt } from "./player.js";
 
 /* js/features/swipe.js — no-reload swipe feed.
- * Builds a small recycled window of .snap-item sections inside .snap-feed
- * and moves the SINGLETON player (#player-region carries #main-video +
- * progress) and rail (#sx-overlay) nodes into the settled section, so all
- * feature modules keep working on their cached references with zero page
- * reloads. An IntersectionObserver picks the active section; views, store
- * and sx:video-changed flow through the same player.js choke point. */
-
-const AHEAD = 3;
-const BEHIND = 1;
+ * The player lives in the boot section and NEVER moves: the boot screen
+ * sticks while transparent spacer sections scroll beneath it, and
+ * activation only swaps the video source — playback behaves like a plain
+ * inline <video>. Spacers only provide scroll distance + IO positions.
+ * Views, store and sx:video-changed flow through player.js. */
 
 let feedEl = null;
 let playerRegion = null;
@@ -35,88 +29,32 @@ function wrapIndex(i, n) {
   return ((i % n) + n) % n;
 }
 
-function posterHTML(v) {
-  let thumb = null;
-  try { thumb = getCachedThumb(v); } catch (e) {}
-  if (thumb) {
-    return '<img src="' + esc(thumb) + '" alt="" loading="lazy" decoding="async" style="width:100%;height:100%;object-fit:cover;display:block;">';
-  }
-  // Plain black backdrop while the video loads — no letter avatars.
-  return '<div aria-hidden="true" style="width:100%;height:100%;background:#000;"></div>';
-}
-
-function sectionEl(poolIdx, v) {
+/* Transparent spacer: no media inside (the static player shows the video,
+ * exactly like a plain inline <video>). pointer-events:none via CSS lets
+ * taps fall through to the player; IO positions come from data-sec. */
+function sectionEl(poolIdx) {
   const sec = document.createElement("div");
-  sec.className = "snap-item relative w-full bg-black";
+  sec.className = "snap-item relative w-full sx-spacer";
   sec.setAttribute("data-sec", String(poolIdx));
   sec.setAttribute("role", "article");
-  sec.setAttribute("aria-label", "Video by @" + (v.creator || "Shortxx"));
-  sec.innerHTML =
-    '<div data-frame class="relative w-full h-full md:max-w-[480px] md:mx-auto md:rounded-lg md:overflow-hidden lg:max-w-[480px] lg:mx-auto lg:rounded-lg lg:overflow-hidden">' +
-    '<div data-media class="absolute inset-0 overflow-hidden bg-black">' + posterHTML(v) + "</div>" +
-    "</div>";
+  sec.setAttribute("aria-label", "Video " + (poolIdx + 1));
   return sec;
 }
 
-/* Incremental window: append/prepend at edges, drop far sections. Never
- * rebuilds the whole list mid-scroll (that would break snap position). */
+/* Append-only spacers for every pool index (0 lives in the boot shell).
+ * Empty divs are trivial: never dropped, only rebuilt on reseed. */
 function ensureWindow(center) {
   const list = pool();
   const n = list.length;
   if (!n || !feedEl) return;
-  const want = new Set();
-  const span = Math.min(n, BEHIND + 1 + AHEAD);
-  // Unique pool indices centered on `center` (no duplicates on tiny pools).
-  for (let k = 0; k < span; k++) {
-    // Order: center, center+1..+AHEAD, center-1..-BEHIND
-    const off = k === 0 ? 0 : k <= AHEAD ? k : -(k - AHEAD);
-    want.add(wrapIndex(center + off, n));
-  }
-  // Drop sections outside the window (never the active one mid-settle).
-  windowMap.forEach((el, idx) => {
-    if (!want.has(idx) && idx !== activePoolIndex) {
-      try { observer.unobserve(el); } catch (e) {}
-      try { el.remove(); } catch (e) {}
-      windowMap.delete(idx);
-    }
-  });
-  // Insert missing sections in pool order.
-  const ordered = [...want].sort((a, b) => {
-    // Sort by distance forward from (center - BEHIND) for DOM order.
-    const rel = (x) => (x - (center - BEHIND) + n * 2) % n;
-    return rel(a) - rel(b);
-  });
-  ordered.forEach((idx) => {
-    if (windowMap.has(idx)) return;
-    const v = list[idx];
-    if (!v) return;
-    const el = sectionEl(idx, v);
-    // Find the next already-mounted section after idx to insert before.
-    let before = null;
-    let probe = (idx + 1) % n;
-    for (let k = 0; k < n; k++) {
-      if (windowMap.has(probe)) { before = windowMap.get(probe); break; }
-      probe = (probe + 1) % n;
-    }
+  for (let idx = 1; idx < n; idx++) {
+    if (windowMap.has(idx)) continue;
+    const el = sectionEl(idx);
     try {
-      if (before && before.parentNode === feedEl) feedEl.insertBefore(el, before);
-      else feedEl.appendChild(el);
-    } catch (e) { return; }
+      feedEl.appendChild(el);
+    } catch (e) { continue; }
     windowMap.set(idx, el);
     try { observer.observe(el); } catch (e) {}
-  });
-}
-
-function nodesPlaced(sec) {
-  try {
-    const media = sec && sec.querySelector("[data-media]");
-    const frame = sec && sec.querySelector("[data-frame]");
-    return !!(
-      media && frame && playerRegion && playerRegion.parentNode === media &&
-      overlay && overlay.parentNode === frame
-    );
-  } catch (e) {
-    return false;
   }
 }
 
@@ -125,13 +63,12 @@ function nodesPlaced(sec) {
 window.sxDiag = function () {
   try {
     const v = mainVideo;
-    const sec = v && v.closest ? v.closest("[data-sec]") : null;
     return {
       pool: pool().length,
       booted: !!booted,
       activeIdx: activePoolIndex,
       playerInDoc: !!(playerRegion && document.contains(playerRegion)),
-      playerSection: sec ? sec.getAttribute("data-sec") : null,
+      playerSection: 'static',
       videoW: v ? v.videoWidth : -1,
       videoH: v ? v.videoHeight : -1,
       clientW: v ? v.clientWidth : -1,
@@ -170,41 +107,21 @@ function setActive(poolIdx) {
   const sec = windowMap.get(idx);
   const data = list[idx];
   if (!sec || !data) {
-    // Target not mounted (stale IO event) — make sure it exists.
+    // Target spacer not mounted (stale IO event) — make sure it exists.
     ensureWindow(idx);
     return;
   }
-  // Already active with nodes in place — just top up the window.
-  if (idx === activePoolIndex && nodesPlaced(sec)) {
+  // Already active — just top up spacers.
+  if (idx === activePoolIndex) {
     ensureWindow(idx);
     return;
   }
   activePoolIndex = idx;
   try {
-    const media = sec.querySelector("[data-media]");
-    const frame = sec.querySelector("[data-frame]");
-    if (media && playerRegion && playerRegion.parentNode !== media) media.appendChild(playerRegion);
-    // Overlay belongs to the centered 480px frame (original geometry):
-    // icons at the frame's right edge, captions bounded by the frame.
-    if (frame && overlay && overlay.parentNode !== frame) frame.appendChild(overlay);
-  } catch (e) {}
-  try {
     if (mainVideo) playVideoAt(mainVideo, activePoolIndex);
   } catch (e) {}
   activateVideo(data);
   ensureWindow(activePoolIndex);
-  // Self-heal: a detached or zero-size player plays audio over black.
-  // Re-mount into the live section and force dimensions if needed.
-  try {
-    const el = windowMap.get(activePoolIndex);
-    const m = el && el.querySelector("[data-media]");
-    if (m && playerRegion && playerRegion.parentNode !== m) m.appendChild(playerRegion);
-    if (mainVideo && (mainVideo.clientWidth === 0 || mainVideo.clientHeight === 0)) {
-      mainVideo.style.width = "100%";
-      mainVideo.style.height = "100%";
-      mainVideo.style.objectFit = "cover";
-    }
-  } catch (e) {}
 }
 
 function onIntersect(entries) {
@@ -279,11 +196,17 @@ function boot() {
   if (!list.length) return;
   booted = true;
   window.sxSwipeBooted = true;
-  // Drop the static boot section (player + rail nodes were already
-  // captured by reference in init, so moving them out is lossless).
+  // The boot shell (static player home) stays forever; register it as
+  // section 0 and build spacers behind it.
   try {
-    const bootSec = feedEl && feedEl.querySelector("[data-boot]");
-    if (bootSec && !windowMap.size) bootSec.remove();
+    const shell = feedEl && feedEl.querySelector("[data-boot]");
+    if (shell) {
+      shell.setAttribute("data-sec", "0");
+      if (!windowMap.has(0)) {
+        windowMap.set(0, shell);
+        try { observer.observe(shell); } catch (e) {}
+      }
+    }
   } catch (e) {}
   activePoolIndex = startIndex();
   try {
@@ -313,11 +236,13 @@ window.sxReseedFeed = function () {
     }
     activePoolIndex = idx;
     try { localStorage.setItem("currentVideoIndex", String(idx)); } catch (e) {}
-    windowMap.forEach((el) => {
+    // Rebuild spacers (boot shell at 0 stays — player home is permanent).
+    windowMap.forEach((el, k) => {
+      if (k === 0) return;
       try { observer.unobserve(el); } catch (e) {}
       try { el.remove(); } catch (e) {}
+      windowMap.delete(k);
     });
-    windowMap = new Map();
     try { feedEl.scrollTop = 0; } catch (e) {}
     ensureWindow(activePoolIndex);
     scrollToActive(true);
@@ -358,14 +283,16 @@ export async function init() {
     try {
       const n = pool().length;
       if (!booted || n < lastPoolSize) {
-        // First boot or pool reset (feed switch): full rebuild.
+        // First boot or pool reset (feed switch): full rebuild, keeping
+        // the boot shell (player home) at 0.
         booted = false;
         window.sxSwipeBooted = false;
-        windowMap.forEach((el) => {
+        windowMap.forEach((el, k) => {
+          if (k === 0) return;
           try { observer.unobserve(el); } catch (e) {}
           try { el.remove(); } catch (e) {}
+          windowMap.delete(k);
         });
-        windowMap = new Map();
         boot();
       } else if (n > lastPoolSize) {
         // Paged append: extend the window in place, no replay/scroll jump.
