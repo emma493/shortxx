@@ -27,6 +27,7 @@ const FEATURES = [
   "likes",
   "discover",
   "menu",
+  "install",
   "feed",
   "trending",
   "mute",

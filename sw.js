@@ -1,7 +1,7 @@
 /* Shortxx service worker — app-shell caching only.
  * Video streams (HLS/mp4), Firestore traffic, analytics and ad networks
  * always go straight to the network so playback and data stay fresh. */
-const CACHE = "shortxx-v10";
+const CACHE = "shortxx-v11";
 const SHELL = [
   "/",
   "/index.html",
@@ -30,6 +30,7 @@ const SHELL = [
   "/js/features/likes.js",
   "/js/features/discover.js",
   "/js/features/menu.js",
+  "/js/features/install.js",
   "/js/features/feed.js",
   "/js/features/trending.js",
   "/js/features/mute.js",
