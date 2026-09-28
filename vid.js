@@ -340,14 +340,11 @@ function preloadNextVideo() {
 
   if (!preloaderElement) {
     preloaderElement = document.createElement("video");
-    // Save-Data / 2G: metadata only until the video is actually next —
-    // a full "auto" preload per swipe stalls low-end phones.
-    try {
-      const c = navigator.connection || {};
-      preloaderElement.preload = (c.saveData || /2g/.test(c.effectiveType || "")) ? "metadata" : "auto";
-    } catch (e) {
-      preloaderElement.preload = "auto";
-    }
+    // Metadata ONLY, always: a full "auto" preload downloads the entire
+    // next file and starves the playing video on slow links (audio flows,
+    // picture never arrives). Headers + first bytes are enough to make the
+    // next swipe instant without halving live bandwidth.
+    preloaderElement.preload = "metadata";
   }
 
   preloaderElement.src = nextVideo.url;

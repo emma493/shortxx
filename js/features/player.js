@@ -185,6 +185,32 @@ export async function init(ctx) {
   // expired CDN link) must never strand the feed on black. Skip to the
   // next video; give up with a message after several consecutive failures.
   let errSkips = 0;
+  // Frame-presentation guard: audio can play for minutes while no picture
+  // ever composites (starved link, undecodable stream) — playing/canplay
+  // still fire, so the stall watchdog above can't see it. Count real
+  // presented frames instead; none in 15s of playback => skip as dead.
+  let frameSeen = false;
+  let frameTimer = 0;
+  const clearFrameWatch = () => {
+    frameSeen = false;
+    if (frameTimer) { try { clearTimeout(frameTimer); } catch (e) {} frameTimer = null; }
+  };
+  const armFrameWatch = () => {
+    clearFrameWatch();
+    if (typeof video.requestVideoFrameCallback !== "function") return;
+    try {
+      video.requestVideoFrameCallback(() => {
+        frameSeen = true;
+        if (frameTimer) { try { clearTimeout(frameTimer); } catch (e) {} frameTimer = null; }
+      });
+    } catch (e) { return; }
+    frameTimer = setTimeout(() => {
+      frameTimer = null;
+      try {
+        if (!frameSeen && !video.paused && video.currentSrc) video.dispatchEvent(new Event("error"));
+      } catch (e) {}
+    }, 15000);
+  };
   // Stall watchdog: a source that never yields its first frame (trickling
   // socket, throttled host) fires no error — without this the feed sits on
   // black + spinner forever. Armed at loadstart, disarmed at first frame;
@@ -206,9 +232,10 @@ export async function init(ctx) {
     }, 25000);
   };
   const toast = (ctx && ctx.toast) || (() => {});
-  video.addEventListener("playing", () => { errSkips = 0; clearStall(); hideLoader(); });
+  video.addEventListener("playing", () => { errSkips = 0; clearStall(); armFrameWatch(); hideLoader(); });
   video.addEventListener("error", () => {
     try {
+      clearFrameWatch();
       errSkips++;
       if (errSkips > 5) {
         errSkips = 0;
@@ -224,7 +251,7 @@ export async function init(ctx) {
   video.addEventListener("canplay", () => { clearStall(); hideLoader(); });
   video.addEventListener("waiting", () => { armStall(); showLoader(); });
   video.addEventListener("stalled", () => { armStall(); showLoader(); });
-  video.addEventListener("loadstart", () => { stallArmed = true; armStall(); showLoader(); });
+  video.addEventListener("loadstart", () => { clearFrameWatch(); stallArmed = true; armStall(); showLoader(); });
   // Single-shot boot play is owned by swipe.js now (it needs the pool
   // first). Fallback: if swipe never boots (no pool), play rotation head.
   window.addEventListener("sx:videos-ready", () => {
