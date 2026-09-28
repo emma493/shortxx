@@ -142,6 +142,16 @@ window.sxDiag = function () {
       netState: v ? v.networkState : null,
       src: v && v.currentSrc ? v.currentSrc.slice(0, 80) : null,
       sections: windowMap ? windowMap.size : -1,
+      viewSec: (() => {
+        try {
+          let best = null, bd = Infinity;
+          windowMap.forEach((el, idx) => {
+            const d = Math.abs((el.offsetTop - feedEl.offsetTop) - feedEl.scrollTop);
+            if (d < bd) { bd = d; best = idx; }
+          });
+          return best;
+        } catch (e) { return null; }
+      })(),
     };
   } catch (e) {
     return { error: String((e && e.message) || e) };
@@ -213,13 +223,33 @@ function onIntersect(entries) {
 }
 
 function scrollToActive(instant) {
-  const sec = windowMap.get(activePoolIndex);
-  if (!sec || !feedEl) return;
-  try {
-    feedEl.scrollTo({ top: sec.offsetTop - feedEl.offsetTop, behavior: instant ? "auto" : "smooth" });
-  } catch (e) {
-    try { feedEl.scrollTop = sec.offsetTop - feedEl.offsetTop; } catch (e2) {}
-  }
+  const first = windowMap.get(activePoolIndex);
+  if (!first || !feedEl) return;
+  // Verified scroll: layout may still be settling at boot (fonts, images,
+  // late CSS), so a single blind scrollTo can strand the viewport on an
+  // empty section while audio plays elsewhere. Recompute + retry until the
+  // viewport actually matches the active section.
+  let tries = 0;
+  const attempt = () => {
+    const sec = windowMap.get(activePoolIndex);
+    if (!sec || !feedEl) return;
+    let target = 0;
+    try {
+      target = sec.offsetTop - feedEl.offsetTop;
+    } catch (e) { return; }
+    try {
+      feedEl.scrollTo({ top: target, behavior: instant ? "auto" : "smooth" });
+    } catch (e) {
+      try { feedEl.scrollTop = target; } catch (e2) { return; }
+    }
+    tries++;
+    if (tries < 4) {
+      let off = Infinity;
+      try { off = Math.abs(feedEl.scrollTop - target); } catch (e) {}
+      if (off > 4) setTimeout(attempt, 150);
+    }
+  };
+  requestAnimationFrame(() => requestAnimationFrame(attempt));
 }
 
 function startIndex() {
