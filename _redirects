@@ -2,6 +2,10 @@
 # shortxx.live/ folder itself so /ntok.css, /js/..., /creator/... resolve.
 # Pretty profile URLs /@name are rewritten by functions/_middleware.js on
 # Cloudflare (this /@* line below is the Netlify equivalent).
+# WARNING: never add a /creator/* splat -> /creator/index.html rule:
+# Cloudflare rejects it as an infinite loop (code 100324) and fails the
+# ENTIRE deploy. Unknown usernames resolve via /@name (feed + grids link
+# there); unknown /creator/ paths fall through to 404.html.
 /saved  /saved/  301
 /saved.html  /saved/  301
 /discover  /discover/  200
