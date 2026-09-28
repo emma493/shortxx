@@ -1,8 +1,6 @@
 import {
   loadVideosFromFirestore,
   getCurrentVideo,
-  getFeedMode,
-  setFeedMode,
   didVideosLoad,
   getLastLoadError,
   getVideoCount,
@@ -23,14 +21,10 @@ import { init as initSwipe } from "./features/swipe.js";
 const FEATURES = [
   "ads",
   "creator",
-  "creator-page",
   "guide",
   "prefs",
   "telemetry",
   "likes",
-  "follow",
-  "save",
-  "comments",
   "discover",
   "menu",
   "feed",
@@ -71,22 +65,16 @@ document.addEventListener("DOMContentLoaded", async () => {
     const params = new URLSearchParams(location.search);
     const deepFeed = params.get("feed");
     const deepPrefs = params.get("prefs");
-    if (deepFeed === "foryou" || deepFeed === "trending") {
-      setFeedMode(deepFeed === "trending" ? "top" : "foryou");
-      const u = new URL(location.href);
-      u.searchParams.delete("feed");
-      location.href = u.toString();
-      return;
-    }
     if (deepFeed === "live") {
       location.href =
         "https://go.whitetrafsa.com?userId=dd571e000ae6f07ef31fa3fb50db3d7353ab3ba1c6c501e61a894d69b80e96ae";
       return;
     }
-    if (deepFeed === "saved") {
-      window.__sxPendingSavedOverlay = true;
+    if (deepFeed === "foryou" || deepFeed === "trending" || deepFeed === "saved") {
+      const u = new URL(location.href);
+      u.searchParams.delete("feed");
       try {
-        history.replaceState(null, "", location.pathname);
+        history.replaceState(null, "", u.pathname + u.search + u.hash);
       } catch (e) {}
     }
     // Side-menu Preferences from folder pages (?prefs=1): strip the param
@@ -151,46 +139,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     } catch (e) {}
   }, 12000);
 
-  // Auth loads ON DEMAND (first login/signup tap), never at boot: its
-  // firebase-auth chunk is the heaviest import and login is guest-optional.
-  // Stubs forward to the real handlers once loaded.
-  let authPromise = null;
-  function loadAuthOnce() {
-    if (!authPromise) {
-      authPromise = (async () => {
-        const mod = await import("./features/auth.js");
-        if (mod && typeof mod.init === "function") await mod.init(ctx);
-      })().catch((e) => {
-        authPromise = null;
-        report("auth", e);
-        throw e;
-      });
-    }
-    return authPromise;
-  }
-  const authEntryStub = async (...args) => {
-    try {
-      await loadAuthOnce();
-    } catch (e) {
-      toast("Login unavailable — check your connection");
-      return;
-    }
-    const real = window.sxAuthEntry;
-    if (typeof real === "function" && real !== authEntryStub) return real(...args);
-  };
-  const authOpenStub = async (...args) => {
-    try {
-      await loadAuthOnce();
-    } catch (e) {
-      toast("Login unavailable — check your connection");
-      return;
-    }
-    const real = window.sxOpenAuth;
-    if (typeof real === "function" && real !== authOpenStub) return real(...args);
-  };
-  window.sxAuthEntry = authEntryStub;
-  window.sxOpenAuth = authOpenStub;
-
+  // Guest-only: no auth module, no login stubs.
   // 2. Critical path FIRST: player + swipe wire synchronously so video
   // plays even if the parallel fan-out below stalls (slow CDN/radio).
   try {
@@ -266,7 +215,4 @@ document.addEventListener("DOMContentLoaded", async () => {
     } catch (e) {}
   }
   await load;
-
-  // Keep feed mode import referenced (deep links above use it)
-  void getFeedMode;
 });

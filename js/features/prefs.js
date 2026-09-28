@@ -35,7 +35,7 @@ function paint() {
   });
 }
 
-function choose(value, viaMenu) {
+function choose(value) {
   const ok = setContentPreference(value);
   paint();
   try {
@@ -48,12 +48,11 @@ function choose(value, viaMenu) {
     );
   } catch (e) {}
   close();
-  // First-visit flow continues into the freshly filtered feed.
-  if (!viaMenu) {
-    try {
-      window.dispatchEvent(new CustomEvent("sx:prefs-chosen"));
-    } catch (e) {}
-  }
+  try {
+    window.dispatchEvent(new CustomEvent("sx:prefs-chosen"));
+  } catch (e) {}
+  // Preference change always refreshes into the freshly filtered feed.
+  location.reload();
 }
 
 function open() {

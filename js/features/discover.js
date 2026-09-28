@@ -139,26 +139,20 @@ export async function init(ctx) {
     '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg></button>' +
     '<button class="sx-t-logo" data-home aria-label="Shortxx home">' + SVG.logo + 'Shortxx</button></div>' +
     '<form class="sx-t-search" role="search"><div class="sx-t-search-box">' + SVG.search +
-    '<input placeholder="Search tags..." aria-label="Search tags" autocomplete="off" data-hsearch /></div></form>' +
-    '<div><button class="sx-t-login" data-auth>' + SVG.login + '<span data-auth-label>Log in</span></button></div></header>' +
+    '<input placeholder="Search tags..." aria-label="Search tags" autocomplete="off" data-hsearch /></div></form></header>' +
     '<aside class="sx-t-side" aria-label="Site navigation">' +
     '<nav class="sx-t-nav">' +
     '<button class="sx-t-navlink" data-go="home">' + SVG.home + 'Home</button>' +
     '<button class="sx-t-navlink on" data-go="discover" aria-current="page">' + SVG.search + 'Discover</button>' +
     '<button class="sx-t-navlink" data-go="trending">' + SVG.flame + 'Trending</button>' +
-    '<button class="sx-t-navlink" data-go="creators">' + SVG.users + 'Creators</button>' +
-    '<button class="sx-t-navlink" data-go="following">' + SVG.usercheck + 'Following feed</button>' +
-    '<button class="sx-t-navlink" data-go="saved">' + SVG.bookmark + 'Saved Videos</button>' +
-    '<button class="sx-t-navlink" data-go="liked">' + SVG.heart + 'Liked Videos</button>' +
     '<button class="sx-t-navlink" data-go="live">' + SVG.play + 'Live Cams</button>' +
-    "</nav>" +
-    '<footer class="sx-t-sidefoot"><button class="sx-t-sidelogin" data-auth>' + SVG.login + '<span data-auth-label>Log in</span></button></footer></aside>' +
+    "</nav></aside>" +
     '<div class="sx-d-page"><button class="sx-d-back" data-close aria-label="Go back">' + SVG.back + "</button>" +
     '<button class="sx-d-menu" data-menu aria-label="Open menu"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg></button>' +
     '<div class="sx-d-wrap"><main id="main-content">' +
     '<h1 class="sx-d-h1">Discover</h1>' +
     '<form class="sx-d-search" role="search">' + SVG.search +
-    '<input data-q class="sx-d-q" placeholder="Search videos, tags, creators..." aria-label="Search" type="text" autocomplete="off" value="" /></form>' +
+    '<input data-q class="sx-d-q" placeholder="Search videos, tags..." aria-label="Search" type="text" autocomplete="off" value="" /></form>' +
     '<div class="sx-d-recent" data-recent></div>' +
     '<div class="sx-d-secs" data-sections></div>' +
     '<div data-results style="display:none"></div>' +
@@ -301,7 +295,7 @@ export async function init(ctx) {
     if (!needle) return true;
     if (tags.some((t) => t.includes(needle))) return true;
     if (q.startsWith("#")) return false;
-    const hay = [v.creator, v.id, v.category, v.caption, tags.join(" ")]
+    const hay = [v.id, v.category, tags.join(" ")]
       .filter(Boolean)
       .join(" ")
       .toLowerCase();
@@ -320,12 +314,8 @@ export async function init(ctx) {
     sectionsEl.style.display = "none";
     resultsEl.style.display = "";
     const pool = getAllVideos();
-    const fols = readJson("shortxx_follows", []);
-    const sav = readJson("shortxx_saved", []);
     let head = "Videos";
     if (q) head = "Videos for \u201C" + q + "\u201D";
-    else if (filter === "following") head = "Following";
-    else if (filter === "saved") head = "Saved videos";
     else if (filter.startsWith("cat:")) head = filter.slice(4);
     resultsEl.innerHTML = '<div class="sx-d-vidhead">' + esc(head) + "</div>" + '<div class="sx-trending-grid" data-vgrid></div>';
     const grid = resultsEl.querySelector("[data-vgrid]");
@@ -333,8 +323,6 @@ export async function init(ctx) {
     // captures at once; "Show more" appends the next chunk on demand.
     const PAGE = 48;
     const matches = pool.filter((v) => {
-      if (filter === "following" && !fols.includes(v.creator)) return false;
-      if (filter === "saved" && !sav.includes(v.id)) return false;
       if (filter.startsWith("cat:") && v.category !== filter.slice(4)) return false;
       return matchVideo(v, q);
     });
@@ -399,14 +387,7 @@ export async function init(ctx) {
     renderChunk();
     const shown = matches.length;
     if (!shown) {
-      grid.innerHTML =
-        '<div class="sx-discover-empty">' +
-        (filter === "following"
-          ? "Follow creators to fill this feed."
-          : filter === "saved"
-            ? "Nothing saved yet — tap Save on any video."
-            : "No videos match.") +
-        "</div>";
+      grid.innerHTML = '<div class="sx-discover-empty">No videos match.</div>';
     }
   }
 
@@ -490,13 +471,6 @@ export async function init(ctx) {
     } catch (err) {}
     safePaint();
   });
-  wrap.querySelectorAll("[data-auth]").forEach((b) =>
-    b.addEventListener("click", async () => {
-      if (window.sxAuthEntry) await window.sxAuthEntry();
-      else if (window.sxOpenAuth) window.sxOpenAuth();
-      else toast("Sign in coming soon");
-    }),
-  );
   wrap.querySelectorAll("[data-go]").forEach((b) =>
     b.addEventListener("click", () => {
       const go = b.getAttribute("data-go");
@@ -509,21 +483,10 @@ export async function init(ctx) {
       } else if (go === "trending") {
         close();
         if (window.sxOpenTrending) window.sxOpenTrending("all");
-      } else if (go === "following") {
-        // Same pipeline as index slide-menu: switch feed, reload to feed.
-        close();
-        if (window.sxSwitchFeed) window.sxSwitchFeed("following");
-        else location.href = "./index.html";
-      } else if (go === "saved") {
-        qEl.value = "";
-        filter = "saved";
-        safePaint();
-      } else if (go === "liked") {
-        location.href = "liked/";
       } else if (go === "live") {
         location.href =
           "https://go.whitetrafsa.com?userId=dd571e000ae6f07ef31fa3fb50db3d7353ab3ba1c6c501e61a894d69b80e96ae";
-      } else if (go === "creators") location.href = "creators/";
+      }
     }),
   );
   // FIXED side menu clone: IDENTICAL items to index.html drawer.
@@ -563,16 +526,6 @@ export async function init(ctx) {
   };
   window.sxOpenDiscover = (f) => wrap._open(f || "all");
   window.sxCloseDiscover = close;
-
-  const pending = window.__sxPendingSavedOverlay;
-  if (pending) {
-    window.__sxPendingSavedOverlay = false;
-    try {
-      wrap._open("saved");
-    } catch (err) {
-      console.error("[shortxx] discover pending open failed:", err);
-    }
-  }
   // Nav wiring lives in the delegated document handler at the top of
   // init() — nothing per-element here (avoids double-toggle).
   void searchBtns;

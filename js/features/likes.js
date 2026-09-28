@@ -1,8 +1,8 @@
 import { formatCount, persistLike } from "../../vid.js";
 import { store, writeJson } from "../store.js";
-import { saveUserProfile } from "../../vid.js";
 
-/* js/features/likes.js — like button + double-tap heart only. */
+/* js/features/likes.js — guest like button + double-tap heart only.
+ * Likes persist locally + globally via Firestore persistLike. */
 
 export async function init(ctx) {
   const likeBtn = document.querySelector(".like-btn");
@@ -12,15 +12,6 @@ export async function init(ctx) {
   const video = document.getElementById("main-video");
   if (!likeBtn) return;
   let lastTap = 0;
-
-  const pushProfile = () => {
-    if (!store.authUser || !store.authUser.uid) return;
-    saveUserProfile(store.authUser.uid, {
-      liked: Object.keys(store.likedMap),
-      saved: store.savedIds,
-      follows: store.follows,
-    });
-  };
 
   const paintLike = () => {
     const liked = !!store.likedMap[store.videoId];
@@ -33,7 +24,6 @@ export async function init(ctx) {
   };
   paintLike();
   window.addEventListener("sx:video-changed", paintLike);
-  window.addEventListener("sx:profile-synced", paintLike);
 
   const toggleLike = () => {
     if (!store.videoId) return;
@@ -52,7 +42,6 @@ export async function init(ctx) {
       likeHeart.classList.add("sx-pop");
     }
     persistLike(store.videoId, liked);
-    pushProfile();
   };
 
   // Center-screen tap feedback (play/pause flash). Ported from the previous

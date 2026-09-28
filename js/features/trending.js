@@ -3,23 +3,15 @@ import { esc } from "../lib/dom.js";
 import { thumbHTML, hydrateThumbVideos, registerVideos } from "../lib/thumb.js";
 import { attachMenuClone } from "../lib/side-menu.js";
 
-/* js/features/trending.js — 1:1 NudiTok /trending?metric=saved
- * (refs/trending page/Trending_ Most Saved). Same UI, nothing changed:
- * desktop top header + left side menu (lg), mobile back pill, H1,
- * metric pills (Trending/Most Liked/Most Viewed/Most Saved/Most
- * Commented), window pills (Today/This Week/This Month/All Time),
- * 3-col 9/16 tiles with play + heart counts. Tapping a tile plays it.
- *
- * Local data notes: docs carry views/likes totals but no global
- * save/comment totals, so Most Saved / Most Commented rank by the
- * closest stored total (likes) until those fields exist. */
+/* js/features/trending.js — guest Trending overlay.
+ * Metric pills (Trending/Most Liked/Most Viewed), window pills
+ * (Today/This Week/This Month/All Time), 3-col 9/16 tiles with play +
+ * heart counts. Tapping a tile plays it. No auth, no saved/commented. */
 
 const METRICS = [
   ["trending", "Trending"],
   ["liked", "Most Liked"],
   ["viewed", "Most Viewed"],
-  ["saved", "Most Saved"],
-  ["commented", "Most Commented"],
 ];
 
 const WINDOWS = [
@@ -31,14 +23,12 @@ const WINDOWS = [
 
 function metricValue(v, metric) {
   if (metric === "liked") return v.likes || 0;
-  if (metric === "saved") return v.saves != null ? v.saves : v.likes || 0;
-  if (metric === "commented") return v.comments != null ? v.comments : v.likes || 0;
   return v.views || 0;
 }
 
 let root = null;
 let gridEl = null;
-let metric = "saved";
+let metric = "trending";
 let windowKey = "all";
 
 function poolFor() {
@@ -184,20 +174,14 @@ export async function init(ctx) {
     '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg></button>' +
     '<button class="sx-t-logo" data-home aria-label="Shortxx home">' + SVG.logo + 'Shortxx</button></div>' +
     '<form class="sx-t-search" role="search"><div class="sx-t-search-box">' + SVG.search +
-    '<input placeholder="Search tags..." aria-label="Search tags" autocomplete="off" data-search /></div></form>' +
-    '<div><button class="sx-t-login" data-auth>' + SVG.login + '<span data-auth-label>Log in</span></button></div></header>' +
+    '<input placeholder="Search tags..." aria-label="Search tags" autocomplete="off" data-search /></div></form></header>' +
     '<aside class="sx-t-side" aria-label="Site navigation">' +
     '<nav class="sx-t-nav">' +
     '<button class="sx-t-navlink" data-go="home">' + SVG.home + 'Home</button>' +
     '<button class="sx-t-navlink" data-go="discover">' + SVG.search + 'Discover</button>' +
     '<button class="sx-t-navlink on" data-go="trending" aria-current="page">' + SVG.flame + 'Trending</button>' +
-    '<button class="sx-t-navlink" data-go="creators">' + SVG.users + 'Creators</button>' +
-    '<button class="sx-t-navlink" data-go="following">' + SVG.usercheck + 'Following feed</button>' +
-    '<button class="sx-t-navlink" data-go="saved">' + SVG.bookmark + 'Saved Videos</button>' +
-    '<button class="sx-t-navlink" data-go="liked">' + SVG.heart + 'Liked Videos</button>' +
     '<button class="sx-t-navlink" data-go="live">' + SVG.play + 'Live Cams</button>' +
-    "</nav>" +
-    '<footer class="sx-t-sidefoot"><button class="sx-t-sidelogin" data-auth>' + SVG.login + '<span data-auth-label>Log in</span></button></footer></aside>' +
+    "</nav></aside>" +
     '<div class="sx-t-page"><button class="sx-trending-back" data-close aria-label="Go back">' + SVG.back + "</button>" +
     '<button class="sx-t-menumob" data-menu aria-label="Open menu"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg></button>' +
     '<div class="sx-t-wrap"><h1 class="sx-t-h1">Trending</h1>' +
@@ -248,32 +232,16 @@ export async function init(ctx) {
     e.preventDefault();
     goSearch();
   });
-  root.querySelectorAll("[data-auth]").forEach((b) =>
-    b.addEventListener("click", async () => {
-      if (window.sxAuthEntry) await window.sxAuthEntry();
-      else if (window.sxOpenAuth) window.sxOpenAuth();
-      else toast("Sign in coming soon");
-    }),
-  );
   root.querySelectorAll("[data-go]").forEach((b) =>
     b.addEventListener("click", () => {
       const go = b.getAttribute("data-go");
       if (go === "home") location.href = "./index.html";
       else if (go === "discover") goSearch();
       else if (go === "trending") safePaint();
-      else if (go === "following") {
-        close();
-        if (window.sxSwitchFeed) window.sxSwitchFeed("following");
-        else location.href = "./index.html";
-      } else if (go === "saved") {
-        close();
-        if (window.sxOpenDiscover) window.sxOpenDiscover("saved");
-      } else if (go === "liked") {
-        location.href = "liked/";
-      } else if (go === "live") {
+      else if (go === "live") {
         location.href =
           "https://go.whitetrafsa.com?userId=dd571e000ae6f07ef31fa3fb50db3d7353ab3ba1c6c501e61a894d69b80e96ae";
-      } else if (go === "creators") location.href = "creators/";
+      }
     }),
   );
   // FIXED side menu clone: IDENTICAL items to index.html drawer.

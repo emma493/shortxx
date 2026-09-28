@@ -39,17 +39,9 @@ export const store = {
   creator: null,
   linkedCreator: false,
   likedMap: readJson("shortxx_liked", {}),
-  savedIds: readJson("shortxx_saved", []),
-  follows: readJson("shortxx_follows", []),
-  authUser: null,
-  auth: null,
 };
 
 export function displayIdentity() {
-  const u = store.authUser;
-  if (u && !u.isAnonymous && (u.displayName || u.email)) {
-    return u.displayName || u.email.split("@")[0];
-  }
   return getDeviceName();
 }
 

@@ -1,10 +1,6 @@
 import { ensurePoolSize, formatCount, getAllVideos, loadVideosFromFirestore } from "../../vid.js";
 import { esc } from "../lib/dom.js";
 import { thumbHTML, hydrateThumbVideos, registerVideos } from "../lib/thumb.js";
-import { bootAuth } from "../lib/auth-boot.js";
-
-// Standalone route: inject shared auth modal + boot authed-only telemetry.
-bootAuth();
 
 /* js/pages/trending-page.js — standalone /trending/ folder page.
  * Mirrors NudiTok /trending ranking (engagement-sorted grid). */

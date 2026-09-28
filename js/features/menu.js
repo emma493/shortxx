@@ -48,9 +48,6 @@ export async function init(ctx) {
     wrap.style.display = "block";
     wrap.removeAttribute("hidden");
     document.body.style.overflow = "hidden";
-    try {
-      if (window.sxPaintAuth) window.sxPaintAuth();
-    } catch (e) {}
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         wrap.querySelector(".sx-sidebar-backdrop").classList.add("active");

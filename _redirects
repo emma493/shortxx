@@ -1,24 +1,14 @@
 # Netlify + Cloudflare Pages redirects. Publish directory must be the
-# shortxx.live/ folder itself so /ntok.css, /js/..., /creator/... resolve.
-# Pretty profile URLs /@name are rewritten by functions/_middleware.js on
-# Cloudflare (this /@* line below is the Netlify equivalent).
-# WARNING: never add a /creator/* splat -> /creator/index.html rule:
-# Cloudflare rejects it as an infinite loop (code 100324) and fails the
-# ENTIRE deploy. Unknown usernames resolve via /@name (feed + grids link
-# there); unknown /creator/ paths fall through to 404.html.
-/saved  /saved/  301
-/saved.html  /saved/  301
+# shortxx.live/ folder itself so /ntok.css, /js/..., /discover/... resolve.
+# Guest-only site: feed (/), Discover, Trending. Removed routes
+# (/creator/*, /creators, /liked, /saved) fall through to 404.html.
 /discover  /discover/  200
 /trending  /trending/  200
-/creators  /creators/  200
-/liked  /liked/  200
-/saved/  /saved/index.html  200
-/creator  /creator/index.html  200
-/creator/  /creator/index.html  200
-/@*  /creator/index.html  200
-
-# NOTE: no per-creator slash 301s here on purpose. Every creator has a real
-# static folder (tools/generate-creator-pages.mjs) so the platform adds the
-# trailing slash natively. Generated /creator/<name> -> /creator/<name>/ 301s
-# were removed: Cloudflare's validator rejects some as infinite loops
-# (code 100324) and fails the ENTIRE deploy.
+/creators  /  301
+/creator/*  /  301
+/liked  /  301
+/liked/*  /  301
+/saved  /  301
+/saved/*  /  301
+/saved.html  /  301
+/@*  /  301

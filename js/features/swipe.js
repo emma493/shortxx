@@ -172,20 +172,15 @@ function scrollToActive(instant) {
 function startIndex() {
   const list = pool();
   if (!list.length) return 0;
+  // Guest feed shuffles every visit: grid picks jump to the video,
+  // otherwise always start at the head (no resume).
   try {
     const pick = sessionStorage.getItem("shortxx_pick");
     if (pick) {
       const pi = list.findIndex((v) => v.id === pick);
-      if (pi >= 0) {
-        try { sessionStorage.removeItem("shortxx_pick"); } catch (e) {}
-        return pi;
-      }
       try { sessionStorage.removeItem("shortxx_pick"); } catch (e) {}
+      if (pi >= 0) return pi;
     }
-  } catch (e) {}
-  try {
-    const saved = parseInt(localStorage.getItem("currentVideoIndex") || "0", 10);
-    if (!isNaN(saved) && saved >= 0 && saved < list.length) return saved;
   } catch (e) {}
   return 0;
 }

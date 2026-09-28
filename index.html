@@ -68,14 +68,11 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
     <link rel="stylesheet" href="css/base.css" />
     <link rel="stylesheet" href="css/effects.css" />
-    <link rel="stylesheet" href="css/features/auth.css" />
     <link rel="stylesheet" href="css/features/menu.css" />
-    <link rel="stylesheet" href="css/features/comments.css" />
     <link rel="stylesheet" href="css/features/discover.css" />
     <link rel="stylesheet" href="css/features/feed.css" />
     <link rel="stylesheet" href="css/features/trending.css" />
     <link rel="stylesheet" href="css/features/player.css" />
-    <link rel="stylesheet" href="css/features/creator-page.css" />
     <link rel="stylesheet" href="css/features/pwa.css" />
     <link rel="stylesheet" href="css/features/guide.css" />
     <link rel="stylesheet" href="css/features/prefs.css" />
@@ -188,7 +185,7 @@
                 </div>
                 <div class="pointer-events-none justify-self-center self-start flex h-12 items-center">
                     <div class="pointer-events-auto relative">
-                        <button id="feed-btn" aria-expanded="false" aria-haspopup="menu" aria-label="Change feed, currently For You" class="inline-flex items-center gap-1 px-3 max-[359px]:px-1.5 min-h-11 text-[16px] font-semibold text-white"><span id="feed-label">For You</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="transition-transform" aria-hidden="true">
+                        <button id="feed-btn" aria-expanded="false" aria-haspopup="menu" aria-label="Change category, currently All" class="inline-flex items-center gap-1 px-3 max-[359px]:px-1.5 min-h-11 text-[16px] font-semibold text-white"><span id="feed-label">All</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="transition-transform" aria-hidden="true">
                                 <polyline points="6 9 12 15 18 9"></polyline>
                             </svg>
                         </button>
@@ -248,22 +245,6 @@
                                 </div>
                                 <div id="sx-overlay" class="absolute inset-0 pointer-events-none">
                                     <div class="ntok-chrome absolute right-2.5 flex flex-col items-center gap-3 max-[700px]:gap-2 [@media(min-height:740px)]:gap-4 pointer-events-auto" style="bottom: calc(var(--overlay-rail-bottom) + env(safe-area-inset-bottom, 0px));">
-                                        <div class="creator-profile relative mb-1">
-                                            <a aria-label="View creator's profile" class="action-btn block" href="/creators/" data-creator>
-                                                <span class="relative flex shrink-0 overflow-hidden rounded-full h-12 w-12 ring-2 ring-white shadow-lg shadow-black/30">
-                                                    <img class="creator-avatar aspect-square h-full w-full object-cover" alt="creator" src="gif.webp" style="display: none;">
-                                                    <span class="creator-initial" aria-hidden="true" style="display: none; width: 100%; height: 100%; align-items: center; justify-content: center; background: #fe2c55; color: #fff; font-size: 20px; font-weight: 800;">?</span>
-                                                </span>
-                                            </a>
-                                            <button aria-label="Follow" class="follow-btn absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 min-w-7 min-h-7 flex items-center justify-center">
-                                                <span class="follow-badge-pulse w-5 h-5 rounded-full bg-primary flex items-center justify-center shadow-md shadow-primary/40">
-                                                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="4" stroke-linecap="round">
-                                                        <line x1="12" y1="6" x2="12" y2="18"></line>
-                                                        <line x1="6" y1="12" x2="18" y2="12"></line>
-                                                    </svg>
-                                                </span>
-                                            </button>
-                                        </div>
                                         <button aria-label="Like" aria-pressed="false" class="like-btn action-btn flex flex-col items-center gap-0.5 relative p-1">
                                             <div class="relative">
                                                 <div class="">
@@ -273,23 +254,6 @@
                                                 </div>
                                             </div>
                                             <span class="like-count text-[11px] text-white font-bold text-video-shadow tabular-nums">0</span>
-                                        </button>
-                                        <button aria-label="Comments" class="comments-btn action-btn flex flex-col items-center gap-0.5 p-1">
-                                            <svg width="34" height="34" viewBox="0 0 24 24" class="drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]" fill="none">
-                                                <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" fill="white" stroke="white" stroke-width="0.5" stroke-linecap="round" stroke-linejoin="round"></path>
-                                                <circle cx="8.5" cy="11.5" r="1" fill="#1e1e1e"></circle>
-                                                <circle cx="12" cy="11.5" r="1" fill="#1e1e1e"></circle>
-                                                <circle cx="15.5" cy="11.5" r="1" fill="#1e1e1e"></circle>
-                                            </svg>
-                                            <span class="comments-count text-[11px] text-white font-bold text-video-shadow tabular-nums">0</span>
-                                        </button>
-                                        <button aria-label="Save" class="save-btn action-btn flex flex-col items-center gap-0.5 relative p-1">
-                                            <div class="relative">
-                                                <svg width="32" height="32" viewBox="0 0 24 24" class="transition-all duration-300 text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]">
-                                                <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
-                                            </svg>
-                                            </div>
-                                            <span class="save-count text-[11px] text-white font-bold text-video-shadow tabular-nums">0</span>
                                         </button>
                                         <button id="share-btn" aria-label="Share" class="action-btn flex flex-col items-center gap-0.5 p-1">
                                             <svg width="32" height="32" viewBox="0 0 24 24" class="drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]" fill="none">
@@ -306,10 +270,9 @@
                                     </div>
                                     <div class="ntok-chrome absolute left-0 right-[68px] px-4 pointer-events-auto" style="bottom: calc(var(--overlay-info-bottom) + env(safe-area-inset-bottom, 0px));">
                                         <div class="flex items-center gap-2">
-                                            <a class="creator-link min-w-0 truncate text-[15px] font-bold text-white text-video-shadow inline-flex items-center gap-1" href="/creators/" data-creator>@<span class="dynamic-username">User</span></a>
+                                            <span class="creator-link min-w-0 truncate text-[15px] font-bold text-white text-video-shadow inline-flex items-center gap-1">@<span class="dynamic-username">Shortxx</span></span>
                                             <button id="sx-see-more" type="button" class="sx-see-more" aria-label="See more from our sponsor"><span>See more</span></button>
                                         </div>
-                                        <p data-caption class="video-caption text-[13px] leading-snug text-white/90 text-video-shadow" style="display:none;margin-top:4px;overflow:hidden;-webkit-line-clamp:2;-webkit-box-orient:vertical;"></p>
                                         <p data-hashtags class="video-hashtags text-[13px] leading-snug font-semibold text-white text-video-shadow" style="display:none;margin-top:2px;overflow:hidden;-webkit-line-clamp:2;-webkit-box-orient:vertical;"></p>
                                     </div>
                                 </div>
@@ -363,61 +326,6 @@
         <div role="region" aria-label="Notifications (F8)" tabindex="-1" style="pointer-events: none;">
             <ol tabindex="-1" class="fixed top-[calc(3.5rem+env(safe-area-inset-top,0px))] right-0 z-[100] flex max-h-screen w-full flex-col p-4 sm:top-auto sm:bottom-[calc(4rem+env(safe-area-inset-bottom,0px))] sm:right-4 sm:flex-col md:max-w-[420px]">
             </ol>
-        </div>
-    </div>
-
-    <!-- Auth Modal -->
-    <div id="auth-modal-overlay" class="auth-overlay hidden">
-        <div class="auth-card">
-            <!-- Close Button -->
-            <button id="close-auth-btn" class="auth-close-btn" aria-label="Close"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
-
-            <!-- User Avatar Header -->
-            <div class="auth-avatar-wrapper">
-                <svg class="auth-avatar-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path>
-                    <circle cx="12" cy="7" r="4"></circle>
-                </svg>
-            </div>
-
-            <h2 id="auth-title" class="auth-title">Sign Up</h2>
-            <p class="auth-subtitle">Free forever · saves sync everywhere · feed learns your taste</p>
-
-            <!-- Email & Password Form -->
-            <form id="auth-form">
-                <div class="input-group">
-                    <input type="email" id="auth-email" placeholder="Email address" required autocomplete="email">
-                </div>
-                <div class="input-group">
-                    <input type="password" id="auth-password" placeholder="Password" required autocomplete="current-password">
-                </div>
-
-                <!-- Action Buttons Row -->
-                <div class="auth-btn-row">
-                    <button type="button" id="submit-login-btn" class="btn-secondary">Log In</button>
-                    <button type="submit" id="submit-signup-btn" class="btn-primary">Sign Up</button>
-                </div>
-            </form>
-
-            <div class="auth-divider">
-                <span>OR</span>
-            </div>
-
-            <!-- Continue with Google -->
-            <button id="google-auth-btn" class="btn-google">
-                <svg class="google-icon" viewBox="0 0 24 24">
-                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
-                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
-                </svg>
-                Continue with Google
-            </button>
-
-            <p class="privacy-note">Private: Google shares only your email with us. Nothing ever appears on your Google account.</p>
-
-            <!-- Quick Login Button -->
-            <button id="quick-login-btn" class="btn-quick-login">⚡ Quick Login (Guest Session)</button>
         </div>
     </div>
 

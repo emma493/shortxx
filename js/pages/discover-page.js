@@ -2,10 +2,6 @@ import { ensurePoolSize, formatCount, getAllVideos, loadVideosFromFirestore } fr
 import { readJson, writeJson } from "../store.js";
 import { esc } from "../lib/dom.js";
 import { thumbHTML, hydrateThumbVideos, registerVideos } from "../lib/thumb.js";
-import { bootAuth } from "../lib/auth-boot.js";
-
-// Standalone route: inject shared auth modal + boot authed-only telemetry.
-bootAuth();
 
 /* js/pages/discover-page.js — standalone /discover/ folder page.
  * Same data model as the feed overlay (js/features/discover.js) but as a
@@ -62,7 +58,7 @@ function matchVideo(v, q) {
   if (!needle) return true;
   if (tags.some((t) => t.includes(needle))) return true;
   if (q.startsWith("#")) return false;
-  return [v.creator, v.id, v.category, v.caption, tags.join(" ")].filter(Boolean).join(" ").toLowerCase().includes(q);
+  return [v.id, v.category, tags.join(" ")].filter(Boolean).join(" ").toLowerCase().includes(q);
 }
 
 function playVideo(id) {

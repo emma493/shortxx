@@ -1,9 +1,10 @@
-import { getFeedMode, setFeedMode, loadVideosFromFirestore } from "../../vid.js";
-import { store, readJson } from "../store.js";
+import { getContentPreference, setContentPreference } from "../../vid.js";
 
-/* js/features/feed.js — For You / Following / Top switcher only. */
+/* js/features/feed.js — guest category switcher: Girls / Couples / All.
+ * Top-center button; choosing a category persists + reloads the feed. */
 
-const NAMES = { foryou: "For You", following: "Following", top: "Top" };
+const NAMES = { girls: "Girls", couples: "Couples", all: "All" };
+const ORDER = ["girls", "couples", "all"];
 
 export async function init(ctx) {
   const feedBtn = document.getElementById("feed-btn");
@@ -12,23 +13,19 @@ export async function init(ctx) {
   if (!feedBtn) return;
 
   const paint = () => {
-    if (feedLabel) feedLabel.textContent = NAMES[getFeedMode()] || "For You";
-    feedBtn.setAttribute("aria-label", "Change feed, currently " + (NAMES[getFeedMode()] || "For You"));
+    const cur = getContentPreference();
+    if (feedLabel) feedLabel.textContent = NAMES[cur] || "All";
+    feedBtn.setAttribute("aria-label", "Change category, currently " + (NAMES[cur] || "All"));
   };
   paint();
+  window.addEventListener("sx:prefs-chosen", paint);
 
   const switchFeed = async (mode) => {
-    if (mode === "following" && readJson("shortxx_follows", []).length === 0) {
-      toast("Follow creators to fill this feed");
-    }
-    setFeedMode(mode);
-    // No-reload reseed: refill the pool, rebuild the swipe window in place.
+    const cur = getContentPreference();
+    if (mode === cur) return;
+    const ok = setContentPreference(mode);
     try {
-      await loadVideosFromFirestore();
-      if (window.sxReseedFeed) {
-        window.sxReseedFeed();
-        return;
-      }
+      toast(ok ? "Showing " + (NAMES[mode] || mode) + " videos" : "No videos in this category yet — showing all");
     } catch (e) {}
     location.reload();
   };
@@ -62,12 +59,12 @@ export async function init(ctx) {
     menu = document.createElement("div");
     menu.setAttribute("role", "menu");
     menu.className = "sx-feed-menu";
-    ["foryou", "following", "top"].forEach((mode) => {
+    ORDER.forEach((mode) => {
       const b = document.createElement("button");
       b.setAttribute("role", "menuitemradio");
-      b.setAttribute("aria-checked", String(getFeedMode() === mode));
+      b.setAttribute("aria-checked", String(getContentPreference() === mode));
       b.className = "sx-feed-item";
-      b.innerHTML = "<span>" + NAMES[mode] + "</span><span>" + (getFeedMode() === mode ? "✓" : "") + "</span>";
+      b.innerHTML = "<span>" + NAMES[mode] + "</span><span>" + (getContentPreference() === mode ? "✓" : "") + "</span>";
       b.addEventListener("click", (ev) => {
         ev.stopPropagation();
         switchFeed(mode);
@@ -75,7 +72,6 @@ export async function init(ctx) {
       menu.appendChild(b);
     });
     document.body.appendChild(menu);
-    // Slide from below on the next frame.
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         if (menu) menu.classList.add("open");
@@ -90,8 +86,6 @@ export async function init(ctx) {
     }, 0);
   };
 
-  // Feed menu opens only on manual tap of the feed button (For You is
-  // already the default — nothing auto-opens on first visit).
   window.sxOpenFeedMenu = openMenu;
   window.sxCloseFeedMenu = closeMenu;
 

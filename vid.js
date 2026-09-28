@@ -40,29 +40,14 @@ export function getFirebaseApp() {
   return app;
 }
 
-/**
- * Per-user synced profile (rules allow public read/write on users/*).
- * Stores liked ids, saved ids and followed creators so they follow the
- * user across devices once signed in.
- */
+/* Guest-only: no per-user synced profiles. Stubs kept so legacy
+ * imports (script.js) never break. */
 export async function loadUserProfile(uid) {
-  if (!uid) return null;
-  try {
-    const snap = await getDoc(doc(db, "users", uid));
-    return snap.exists() ? snap.data() : null;
-  } catch (err) {
-    console.warn("Profile load failed:", err);
-    return null;
-  }
+  return null;
 }
 
 export async function saveUserProfile(uid, data) {
-  if (!uid) return;
-  try {
-    await setDoc(doc(db, "users", uid), data, { merge: true });
-  } catch (err) {
-    console.warn("Profile save failed:", err);
-  }
+  return;
 }
 
 // Stable per-video creator pseudonyms (no Admin change needed).
@@ -116,19 +101,10 @@ export function hasMoreVideos() {
   return morePages;
 }
 
-/** Orders ONLY new arrivals per current mode/pref (never reshuffles the
+/** Orders ONLY new arrivals per current pref (never reshuffles the
  *  live pool — swipe windows are index-keyed and must stay stable). */
 function orderPage(newRaw) {
   const scoped = applyPreference(newRaw);
-  const mode = getFeedMode();
-  if (mode === "top") {
-    return [...scoped].sort((a, b) => (b.views || 0) - (a.views || 0));
-  }
-  if (mode === "following") {
-    const follows = readFollows();
-    const filtered = scoped.filter((v) => follows.includes(v.creator));
-    return filtered.length > 0 ? filtered : [...scoped];
-  }
   return shuffleArray([...scoped]);
 }
 
@@ -278,40 +254,18 @@ function resolveCreator(data, docId) {
   return { name: creatorFor(docId), avatarUrl: null, bio: null, followers: null, following: null, likesTotal: null, creatorCategory: null, linked: true };
 }
 
-function readFollows() {
-  try {
-    return JSON.parse(localStorage.getItem("shortxx_follows") || "[]");
-  } catch (e) {
-    return [];
-  }
-}
-
+/* Guest-only: single shuffled feed ordered by content preference
+ * (Girls / Couples / All). No Following / Top modes. */
 export function getFeedMode() {
-  const m = localStorage.getItem("shortxx_feed");
-  return m === "following" || m === "top" ? m : "foryou";
+  return "foryou";
 }
 
 export function setFeedMode(mode) {
-  localStorage.setItem(
-    "shortxx_feed",
-    mode === "following" || mode === "top" ? mode : "foryou",
-  );
+  return;
 }
 
 function applyFeedOrder(list) {
-  // Content preference first (Girls / Couples / All), then feed mode.
-  const scoped = applyPreference(list);
-  const mode = getFeedMode();
-  if (mode === "top") {
-    return [...scoped].sort((a, b) => (b.views || 0) - (a.views || 0));
-  }
-  if (mode === "following") {
-    const follows = readFollows();
-    const filtered = scoped.filter((v) => follows.includes(v.creator));
-    // Empty following feed falls back to everything (caller toasts a hint).
-    return filtered.length > 0 ? filtered : [...scoped];
-  }
-  return shuffleArray([...scoped]);
+  return shuffleArray([...applyPreference(list)]);
 }
 
 /**
@@ -515,26 +469,23 @@ export async function loadVideosFromFirestore() {
       return [];
     }
 
-    // Order per active feed (For You shuffle / Following / Top).
+    // Guest feed: fresh random shuffle EVERY visit (no resume).
     allRawVideos = rawVideos;
     fetchedVideos = applyFeedOrder(rawVideos);
+    currentVideoIndex = 0;
 
-    // Retrieve previous index session if available
-    const savedIndex = parseInt(localStorage.getItem("currentVideoIndex") || "0", 10);
-    currentVideoIndex = isNaN(savedIndex) || savedIndex >= fetchedVideos.length ? 0 : savedIndex;
-
-    // Discover grid pick: jump straight to the chosen video after reload.
+    // Discover/Trending grid pick: jump straight to the chosen video.
     try {
       const pick = sessionStorage.getItem("shortxx_pick");
       if (pick) {
         const pi = fetchedVideos.findIndex((v) => v.id === pick);
-        if (pi >= 0) {
-          currentVideoIndex = pi;
-          localStorage.setItem("currentVideoIndex", String(pi));
-        }
+        if (pi >= 0) currentVideoIndex = pi;
         sessionStorage.removeItem("shortxx_pick");
       }
     } catch (e) { /* storage blocked: ignore */ }
+    try {
+      localStorage.setItem("currentVideoIndex", String(currentVideoIndex));
+    } catch (e) {}
 
     preloadNextVideo();
     loadSettled = true;
@@ -758,126 +709,29 @@ export async function resolveCountry() {
 }
 
 export function authProviderLabel(user) {
-  if (!user) return "guest";
-  if (user.isAnonymous) return "guest";
-  try {
-    const pid = (user.providerData && user.providerData[0] && user.providerData[0].providerId) || "";
-    if (pid.includes("google")) return "google";
-    if (pid.includes("password")) return "email";
-  } catch (e) {}
-  return user.email ? "email" : "guest";
+  return "guest";
 }
 
-/** Upsert merge-safe user doc: presence + device/platform/auth/geo.
- * NOTE: firstSeen is intentionally NOT written here — merge:true would
- * overwrite it on every 25 s heartbeat, destroying the original value the
- * Admin date-range filter depends on. First-seen defaults are applied
- * read-side (Admin subscribeToUsers falls back to `new Date()`). */
+/* Guest-only: no per-user telemetry docs. Stubs kept for legacy imports. */
 export async function upsertUserTelemetry(uid, extra) {
-  if (!uid) return;
-  try {
-    const appType = detectAppType();
-    const { group, raw } = classifyReferral();
-    const geo = await resolveCountry();
-    await setDoc(doc(db, "users", uid), {
-      userId: uid,
-      deviceType: detectDeviceType(),
-      appType: appType,
-      isPWA: appType === "PWA",
-      trafficSource: raw,
-      referralGroup: group,
-      country: geo.code,
-      countrySource: geo.source,
-      status: "Online",
-      lastActive: serverTimestamp(),
-      currentPage: location.pathname + location.search,
-      authProvider: (extra && extra.authProvider) || "guest",
-    }, { merge: true });
-  } catch (err) {
-    console.warn("User telemetry upsert failed:", err);
-  }
+  return;
 }
 
-/** Increment engagement counters without overwriting profile fields. */
 export async function incrementUserCounters(uid, counters) {
-  if (!uid || !counters) return;
-  try {
-    const payload = { lastActive: serverTimestamp(), status: "Online" };
-    if (counters.watchSeconds) payload.totalDurationSeconds = increment(counters.watchSeconds);
-    if (counters.completed) payload.videosWatched = increment(1);
-    if (counters.saveDelta) payload.totalSaves = increment(counters.saveDelta);
-    if (counters.downloadDelta) payload.totalDownloads = increment(counters.downloadDelta);
-    await setDoc(doc(db, "users", uid), payload, { merge: true });
-  } catch (err) {
-    console.warn("User counter increment failed:", err);
-  }
+  return;
 }
 
-/** Mark user offline on tab hide (best-effort; heartbeat is source of truth). */
 export async function markUserOffline(uid) {
-  if (!uid) return;
-  try {
-    await setDoc(doc(db, "users", uid), { status: "Offline", lastActive: serverTimestamp() }, { merge: true });
-  } catch (err) {}
+  return;
 }
 
-/**
- * Comments ride the public `events` collection (event_type 'comment') so no
- * rules/Admin change is needed. Single-field query avoids composite indexes.
- */
+/* Guest-only: comments removed. Stubs kept for legacy imports. */
 export async function getComments(videoId) {
-  if (!videoId) return [];
-  try {
-    const eventsRef = collection(db, "events");
-    const q = query(eventsRef, where("video_id", "==", videoId));
-    const snap = await getDocs(q);
-    const list = [];
-    snap.forEach((d) => {
-      const data = d.data();
-      if (data.event_type !== "comment") return;
-      let ts = Date.now();
-      const t = data.timestamp;
-      if (t && typeof t.toMillis === "function") ts = t.toMillis();
-      else if (typeof data.createdAt === "string") {
-        const p = Date.parse(data.createdAt);
-        if (!isNaN(p)) ts = p;
-      }
-      list.push({
-        id: d.id,
-        name: data.userId || "ANONYMOUS",
-        text: data.details || "",
-        ts,
-      });
-    });
-    list.sort((a, b) => a.ts - b.ts);
-    return list;
-  } catch (err) {
-    console.warn("Comments fetch failed:", err);
-    return [];
-  }
+  return [];
 }
 
 export async function postComment(videoId, name, text) {
-  const clean = (text || "").trim().slice(0, 300);
-  if (!videoId || !clean) return null;
-  try {
-    const ref = await addDoc(collection(db, "events"), {
-      event_type: "comment",
-      video_id: videoId,
-      userId: (name || "ANONYMOUS").slice(0, 32),
-      device_type: detectDeviceType(),
-      app_type: detectAppType(),
-      country: (typeof window !== "undefined" && window.shortxxCountry) || "GH",
-      referrer: document.referrer || "Direct",
-      timestamp: serverTimestamp(),
-      createdAt: new Date().toISOString(),
-      details: clean,
-    });
-    return ref.id;
-  } catch (err) {
-    console.warn("Comment post failed:", err);
-    return null;
-  }
+  return null;
 }
 
 /**
