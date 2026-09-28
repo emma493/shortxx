@@ -23,6 +23,28 @@ export async function onRequest(context) {
         });
       }
     }
+    // Dynamic creator fallback: /creator/<any>/ serves the shell when no
+    // static folder exists (creator-page.js resolves any Firestore username
+    // client-side). Existing folders/files pass through untouched; dotted
+    // paths (real assets) fall through to platform handling.
+    if (path.startsWith("/creator/") && path !== "/creator/") {
+      const last = path.split("/").filter(Boolean).pop() || "";
+      if (!last.includes(".")) {
+        let assetRes = null;
+        try {
+          assetRes = await context.env.ASSETS.fetch(context.request);
+        } catch (e) {
+          assetRes = null;
+        }
+        if (assetRes && assetRes.ok) return assetRes;
+        const rewrite = new URL("/creator/index.html", url.origin);
+        const shell = await context.env.ASSETS.fetch(rewrite);
+        return new Response(shell.body, {
+          status: 200,
+          headers: shell.headers,
+        });
+      }
+    }
   } catch (e) {
     // Fall through to static / 404.html handling on any error.
   }
