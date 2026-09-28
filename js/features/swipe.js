@@ -120,6 +120,34 @@ function nodesPlaced(sec) {
   }
 }
 
+/* One-shot diagnostic for black-screen reports: paste window.sxDiag()
+ * output from the console. Shows pool, boot, mount state and player state. */
+window.sxDiag = function () {
+  try {
+    const v = mainVideo;
+    const sec = v && v.closest ? v.closest("[data-sec]") : null;
+    return {
+      pool: pool().length,
+      booted: !!booted,
+      activeIdx: activePoolIndex,
+      playerInDoc: !!(playerRegion && document.contains(playerRegion)),
+      playerSection: sec ? sec.getAttribute("data-sec") : null,
+      videoW: v ? v.videoWidth : -1,
+      videoH: v ? v.videoHeight : -1,
+      clientW: v ? v.clientWidth : -1,
+      clientH: v ? v.clientHeight : -1,
+      paused: v ? v.paused : null,
+      time: v ? +v.currentTime.toFixed(2) : null,
+      readyState: v ? v.readyState : null,
+      netState: v ? v.networkState : null,
+      src: v && v.currentSrc ? v.currentSrc.slice(0, 80) : null,
+      sections: windowMap ? windowMap.size : -1,
+    };
+  } catch (e) {
+    return { error: String((e && e.message) || e) };
+  }
+};
+
 function setActive(poolIdx) {
   const list = pool();
   if (!list.length) return;
@@ -155,6 +183,18 @@ function setActive(poolIdx) {
   } catch (e) {}
   activateVideo(data);
   ensureWindow(activePoolIndex);
+  // Self-heal: a detached or zero-size player plays audio over black.
+  // Re-mount into the live section and force dimensions if needed.
+  try {
+    const el = windowMap.get(activePoolIndex);
+    const m = el && el.querySelector("[data-media]");
+    if (m && playerRegion && playerRegion.parentNode !== m) m.appendChild(playerRegion);
+    if (mainVideo && (mainVideo.clientWidth === 0 || mainVideo.clientHeight === 0)) {
+      mainVideo.style.width = "100%";
+      mainVideo.style.height = "100%";
+      mainVideo.style.objectFit = "cover";
+    }
+  } catch (e) {}
 }
 
 function onIntersect(entries) {
