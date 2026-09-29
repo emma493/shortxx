@@ -36,16 +36,10 @@ function paint() {
 }
 
 function choose(value) {
-  const ok = setContentPreference(value);
+  setContentPreference(value);
   paint();
   try {
-    toast(
-      ok
-        ? value === "all"
-          ? "Showing all videos"
-          : `Showing ${value} videos`
-        : "No videos in this category yet — showing all"
-    );
+    toast(value === "all" ? "Showing all videos" : `Showing ${value} videos`);
   } catch (e) {}
   close();
   try {

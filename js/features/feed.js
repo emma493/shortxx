@@ -37,11 +37,11 @@ export async function init(ctx) {
   const switchFeed = async (mode) => {
     const cur = getContentPreference();
     if (mode === cur) return;
-    const ok = setContentPreference(mode);
+    setContentPreference(mode);
     paint();
     paintMenuChecks(menu);
     try {
-      toast(ok ? "Showing " + (NAMES[mode] || mode) + " videos" : "No videos in this category yet — showing all");
+      toast("Showing " + (NAMES[mode] || mode) + " videos");
     } catch (e) {}
     closeMenu();
     // Live switch: setContentPreference() rebuilt the pool + fired

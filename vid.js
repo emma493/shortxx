@@ -158,29 +158,32 @@ function effectiveCategory(v) {
   return c === "girls" || c === "couples" ? c : null;
 }
 
-function applyPreference(list) {
-  const pref = getContentPreference();
+function applyPreference(list, prefOverride) {
+  const pref = prefOverride || getContentPreference();
   if (pref === "all") return list;
+  const hasAnyLabeled = list.some((v) => effectiveCategory(v) !== null);
   const kept = list.filter((v) => {
     const c = effectiveCategory(v);
-    // Unresolvable videos stay visible (Admin guarantees coverage; this is
-    // belt-and-braces so a data gap can never blank the app).
-    return !c || c === pref;
+    // Strict once any video is labeled: unresolvable videos must NOT leak
+    // Girls into the Couples feed (or vice versa). Only when the whole pool
+    // is legacy (nothing labeled at all) do we stay permissive so the feed
+    // can never blank on a data gap.
+    if (!c) return !hasAnyLabeled;
+    return c === pref;
   });
-  // Empty-result guard: never hand downstream an empty pool when videos exist.
-  if (kept.length === 0 && list.length > 0) {
-    try {
-      window.dispatchEvent(new CustomEvent("sx:pref-empty", { detail: { pref } }));
-    } catch (e) {}
-    return list;
-  }
+  // Empty-result guard (silent): never hand downstream an empty pool when
+  // videos exist — fall back to the full list with NO event/toast. The user
+  // must never see "no videos in this category".
+  if (kept.length === 0 && list.length > 0) return list;
   return kept;
 }
 
 /* Persist a new preference, rebuild the pool + order, restart at the head.
- * Grids, swipe window and player all follow via sx:videos-ready. Returns
- * false when the category matched nothing (pool fell back to full + the
- * caller should toast); true otherwise. */
+ * Grids, swipe window and player all follow via sx:videos-ready. Always
+ * returns true and stays silent: an empty category silently falls back to
+ * the full pool (no toast, no popup). When the current in-memory pool has
+ * no match but more pages exist server-side, it backfills in the background
+ * and re-seeds so Couples appear even when they sit beyond the first page. */
 export function setContentPreference(pref) {
   const p = pref === "girls" || pref === "couples" ? pref : "all";
   try {
@@ -195,8 +198,43 @@ export function setContentPreference(pref) {
   try {
     window.dispatchEvent(new CustomEvent("sx:videos-ready", { detail: { reset: true } }));
   } catch (e) {}
-  if (p === "all") return true;
-  return allRawVideos.some((v) => effectiveCategory(v) === p);
+  // Backfill: first page may hold zero matches (e.g. all Girls) while Couples
+  // exist deeper. Pull more pages until the category appears or we exhaust.
+  if (p !== "all" && morePages && !allRawVideos.some((v) => effectiveCategory(v) === p)) {
+    void backfillForPreference(p);
+  }
+  return true;
+}
+
+/** Background backfill for a category missing from the in-memory pool.
+ *  Pages forward (unfiltered query, client-side match) until a video with
+ *  the wanted effective category arrives or the collection is exhausted,
+ *  then re-seeds the live pool silently. */
+async function backfillForPreference(pref) {
+  if (pagingInFlight) return;
+  try {
+    for (let attempt = 0; attempt < 20 && morePages; attempt++) {
+      const before = allRawVideos.length;
+      await requestMoreVideos(MAX_PAGE_SIZE);
+      if (allRawVideos.length === before) break;
+      if (allRawVideos.some((v) => effectiveCategory(v) === pref)) {
+        // Only re-seed when our live pool was the silent fallback (i.e. it
+        // currently holds videos outside the wanted category).
+        const want = getContentPreference();
+        if (want === pref) {
+          fetchedVideos = applyFeedOrder(allRawVideos);
+          currentVideoIndex = 0;
+          try {
+            localStorage.setItem("currentVideoIndex", "0");
+          } catch (e) {}
+          try {
+            window.dispatchEvent(new CustomEvent("sx:videos-ready", { detail: { reset: true } }));
+          } catch (e) {}
+        }
+        break;
+      }
+    }
+  } catch (e) {}
 }
 
 // Creator directory (Session A `creators` collection). Best-effort: rules
@@ -265,7 +303,49 @@ export function setFeedMode(mode) {
 }
 
 function applyFeedOrder(list) {
-  return shuffleArray([...applyPreference(list)]);
+  const pref = getContentPreference();
+  if (pref === "all") return interleaveAll(list);
+  return shuffleArray([...applyPreference(list, pref)]);
+}
+
+/** 'All' mix: ~70% Girls / ~30% Couples. Each bucket is shuffled, then
+ *  emitted in 7-girls / 3-couples blocks so the blend is visible even when
+ *  counts are skewed. Unlabeled (legacy) videos ride with the Girls bucket
+ *  (majority) so they never blank the feed. Either bucket empty degrades to
+ *  a plain shuffle of what exists. */
+function interleaveAll(list) {
+  if (!list.length) return [];
+  const girls = [];
+  const couples = [];
+  list.forEach((v) => {
+    const c = effectiveCategory(v);
+    if (c === "couples") couples.push(v);
+    else girls.push(v);
+  });
+  shuffleArray(girls);
+  shuffleArray(couples);
+  if (!girls.length) return couples;
+  if (!couples.length) return girls;
+  const out = [];
+  let gi = 0;
+  let ci = 0;
+  while (gi < girls.length || ci < couples.length) {
+    for (let k = 0; k < 7 && gi < girls.length; k++) out.push(girls[gi++]);
+    for (let k = 0; k < 3 && ci < couples.length; k++) out.push(couples[ci++]);
+  }
+  return out;
+}
+
+/** New random order for the NEXT cycle after the user has watched every
+ *  video in the current pool. Never reshuffles mid-cycle (swipe windows are
+ *  index-keyed) — only called exactly on wrap. */
+function reshuffleLivePool() {
+  const pref = getContentPreference();
+  if (pref === "all") fetchedVideos = interleaveAll(allRawVideos.length ? allRawVideos : fetchedVideos);
+  else {
+    const base = allRawVideos.length ? applyPreference(allRawVideos, pref) : fetchedVideos;
+    fetchedVideos = shuffleArray([...(base.length ? base : fetchedVideos)]);
+  }
 }
 
 /**
@@ -471,6 +551,38 @@ export async function loadVideosFromFirestore() {
 
     // Guest feed: fresh random shuffle EVERY visit (no resume).
     allRawVideos = rawVideos;
+    // Boot coverage: the first page alone can miss a whole category (e.g.
+    // all Girls while Couples sit deeper). When the persisted pref has zero
+    // matches in page one but more pages exist, pull follow-up pages NOW so
+    // the first paint already honors the filter instead of silently
+    // falling back to Girls.
+    try {
+      const bootPref = getContentPreference();
+      if (bootPref !== "all" && morePages && !rawVideos.some((v) => effectiveCategory(v) === bootPref)) {
+        let cursor = pageCursor;
+        for (let attempt = 0; attempt < 6 && morePages; attempt++) {
+          let extra = null;
+          try {
+            extra = await Promise.race([
+              fetchRawPage(cursor, MAX_PAGE_SIZE),
+              new Promise((_, reject) => setTimeout(() => reject(new Error("sdk-timeout")), 20000)),
+            ]);
+          } catch (e) {
+            break;
+          }
+          if (!extra || !extra.raw.length) {
+            if (extra && extra.exhausted) morePages = false;
+            break;
+          }
+          cursor = extra.lastDoc || cursor;
+          if (extra.exhausted) morePages = false;
+          rawVideos = [...rawVideos, ...extra.raw];
+          if (rawVideos.some((v) => effectiveCategory(v) === bootPref)) break;
+        }
+        pageCursor = cursor;
+        allRawVideos = rawVideos;
+      }
+    } catch (e) {}
     fetchedVideos = applyFeedOrder(rawVideos);
     currentVideoIndex = 0;
 
@@ -490,6 +602,14 @@ export async function loadVideosFromFirestore() {
     preloadNextVideo();
     loadSettled = true;
     lastLoadError = null;
+    // If the persisted category still has no match after the boot top-up,
+    // keep backfilling quietly in the background and re-seed on arrival.
+    try {
+      const bootPref = getContentPreference();
+      if (bootPref !== "all" && morePages && !allRawVideos.some((v) => effectiveCategory(v) === bootPref)) {
+        void backfillForPreference(bootPref);
+      }
+    } catch (e) {}
     return fetchedVideos;
   } catch (error) {
     console.error("Error fetching videos from Firestore:", error);
@@ -569,8 +689,16 @@ export function getNextVideo() {
   const videoData = fetchedVideos[currentVideoIndex];
   currentVideo = videoData;
 
-  // Advance index and save state to prevent repeats on page switches
+  // Advance index and save state to prevent repeats on page switches.
+  // On full-cycle wrap, reshuffle silently so the next round plays in a
+  // different random order instead of repeating the same sequence.
+  const wrapped = currentVideoIndex >= fetchedVideos.length - 1;
   currentVideoIndex = (currentVideoIndex + 1) % fetchedVideos.length;
+  if (wrapped && fetchedVideos.length > 1) {
+    try {
+      reshuffleLivePool();
+    } catch (e) {}
+  }
   localStorage.setItem("currentVideoIndex", currentVideoIndex.toString());
 
   // Trigger background preloading for the upcoming video
