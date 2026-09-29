@@ -5,7 +5,7 @@
  * re-prompts next visit; a choice ends it forever. Opened programmatically
  * via window.sxOpenPrefs (side menu, ?prefs=1 deep link). */
 
-import { getContentPreference, setContentPreference } from "../../vid.js";
+import { getContentPreference, setContentPreference, getVideoCount, didVideosLoad } from "../../vid.js";
 
 const OPTIONS = [
   { value: "girls", label: "Girls" },
@@ -50,12 +50,16 @@ function choose(value) {
   // stays visible and playback continues from the fresh head.
 }
 
+function isOpen() {
+  return !!(root && root.style.display !== "none");
+}
+
 function open() {
-  if (!root) return;
+  if (!root || isOpen()) return;
   paint();
   root.style.display = "";
   requestAnimationFrame(() => {
-    requestAnimationFrame(() => root.classList.add("open"));
+    requestAnimationFrame(() => { if (root) root.classList.add("open"); });
   });
 }
 
@@ -121,4 +125,10 @@ export async function init(ctx) {
       if (!hasChosen()) open();
     } catch (e) {}
   });
+  // Self-heal: prefs inits LATE (after first frame / 15s, see main.js) while
+  // the boot sx:videos-ready fires EARLY — the listener above usually misses
+  // it. If videos are already loaded and no choice was ever made, open now.
+  try {
+    if (!hasChosen() && (getVideoCount() > 0 || didVideosLoad())) open();
+  } catch (e) {}
 }

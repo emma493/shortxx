@@ -216,4 +216,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     } catch (e) {}
   }
   await load;
+  // Late-feature heal: prefs/guide/discover/trending/player all init AFTER
+  // the early boot sx:videos-ready above, so their listeners miss it and the
+  // first-visit popup never opens. One non-reset re-fire lets them sync.
+  // Safe: swipe.js treats a same-size non-reset event as a no-op (no
+  // rebuild, no replay, no scroll jump).
+  try {
+    if (getVideoCount() > 0) videosReady();
+  } catch (e) {}
 });
