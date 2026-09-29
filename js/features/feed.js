@@ -1,10 +1,24 @@
 import { getContentPreference, setContentPreference } from "../../vid.js";
 
 /* js/features/feed.js — guest category switcher: Girls / Couples / All.
- * Top-center button; choosing a category persists + reloads the feed. */
+ * Top-center button; choosing a category persists + repaints live (no reload). */
 
 const NAMES = { girls: "Girls", couples: "Couples", all: "All" };
 const ORDER = ["girls", "couples", "all"];
+
+function paintMenuChecks(menu) {
+  if (!menu) return;
+  const cur = getContentPreference();
+  menu.querySelectorAll(".sx-feed-item").forEach((b, i) => {
+    const mode = ORDER[i];
+    if (!mode) return;
+    const on = mode === cur;
+    b.setAttribute("aria-checked", String(on));
+    const spans = b.querySelectorAll("span");
+    const check = spans[spans.length - 1];
+    if (check) check.textContent = on ? "✓" : "";
+  });
+}
 
 export async function init(ctx) {
   const feedBtn = document.getElementById("feed-btn");
@@ -24,10 +38,15 @@ export async function init(ctx) {
     const cur = getContentPreference();
     if (mode === cur) return;
     const ok = setContentPreference(mode);
+    paint();
+    paintMenuChecks(menu);
     try {
       toast(ok ? "Showing " + (NAMES[mode] || mode) + " videos" : "No videos in this category yet — showing all");
     } catch (e) {}
-    location.reload();
+    closeMenu();
+    // Live switch: setContentPreference() rebuilt the pool + fired
+    // sx:videos-ready (swipe.js rebuilds spacers + restarts at head,
+    // grids repaint). No reload so the toast stays visible.
   };
   window.sxSwitchFeed = switchFeed;
 
@@ -52,6 +71,7 @@ export async function init(ctx) {
 
   const openMenu = () => {
     if (menu) {
+      paintMenuChecks(menu);
       menu.classList.add("open");
       feedBtn.setAttribute("aria-expanded", "true");
       return;

@@ -51,8 +51,9 @@ function choose(value) {
   try {
     window.dispatchEvent(new CustomEvent("sx:prefs-chosen"));
   } catch (e) {}
-  // Preference change always refreshes into the freshly filtered feed.
-  location.reload();
+  // Live switch: setContentPreference() already rebuilt the pool + fired
+  // sx:videos-ready (swipe/grids/player follow). No reload so the toast
+  // stays visible and playback continues from the fresh head.
 }
 
 function open() {

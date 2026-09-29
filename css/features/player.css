@@ -203,14 +203,16 @@
   outline-offset: 2px;
 }
 
-/* Rail mute button below Share (previous-version FA volume icons). */
-.sx-rail-mute-icon {
+/* Rail mute + install buttons below Share (previous-version FA icons). */
+.sx-rail-mute-icon,
+.sx-rail-install-icon {
   font-size: 27px;
   color: #fff;
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
   transition: opacity 0.15s ease;
 }
-#sx-rail-mute:focus-visible {
+#sx-rail-mute:focus-visible,
+#sx-rail-install:focus-visible {
   outline: 2px solid rgba(255, 255, 255, 0.8);
   outline-offset: 2px;
   border-radius: 8px;

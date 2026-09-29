@@ -1,13 +1,13 @@
 import { isAppInstalled } from "../lib/side-menu.js";
 
-/* js/features/install.js — bottom-nav Install button.
- * Same pipeline as the drawer Install row (side-menu.js): hidden when the
- * app is already installed; tap fires the native prompt when available,
- * otherwise shows per-platform add-to-homescreen instructions. */
+/* js/features/install.js — rail Install button (below Sound in the viewer rail).
+ * Same pipeline as the drawer Install row (side-menu.js): always shown when
+ * not installed; tap fires the native prompt when available, otherwise shows
+ * per-platform add-to-homescreen instructions. Hidden only once installed. */
 
 export async function init(ctx) {
   const toast = (ctx && ctx.toast) || (() => {});
-  const btn = document.getElementById("install-btn");
+  const btn = document.getElementById("sx-rail-install");
   if (!btn) return;
 
   const hide = () => {

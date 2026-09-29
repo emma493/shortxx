@@ -274,10 +274,11 @@ export async function init() {
   });
   observer = new IntersectionObserver(onIntersect, { root: feedEl, threshold: [0.6] });
   boot();
-  window.addEventListener("sx:videos-ready", () => {
+  window.addEventListener("sx:videos-ready", (ev) => {
     try {
       const n = pool().length;
-      if (!booted || n < lastPoolSize) {
+      const reset = !!(ev && ev.detail && ev.detail.reset);
+      if (reset || !booted || n < lastPoolSize) {
         // First boot or pool reset (feed switch): full rebuild, keeping
         // the boot shell (player home) at 0.
         booted = false;

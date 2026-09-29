@@ -193,7 +193,7 @@ export function setContentPreference(pref) {
     localStorage.setItem("currentVideoIndex", "0");
   } catch (e) {}
   try {
-    window.dispatchEvent(new CustomEvent("sx:videos-ready"));
+    window.dispatchEvent(new CustomEvent("sx:videos-ready", { detail: { reset: true } }));
   } catch (e) {}
   if (p === "all") return true;
   return allRawVideos.some((v) => effectiveCategory(v) === p);

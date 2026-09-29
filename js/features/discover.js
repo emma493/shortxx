@@ -323,7 +323,12 @@ export async function init(ctx) {
     // captures at once; "Show more" appends the next chunk on demand.
     const PAGE = 48;
     const matches = pool.filter((v) => {
-      if (filter.startsWith("cat:") && v.category !== filter.slice(4)) return false;
+      // Same resolution as the feed filter (vid.js effectiveCategory):
+      // creator-linked category wins, video doc category is the fallback.
+      if (filter.startsWith("cat:")) {
+        const c = v.creatorCategory || v.category;
+        if (c !== filter.slice(4)) return false;
+      }
       return matchVideo(v, q);
     });
     let rendered = 0;

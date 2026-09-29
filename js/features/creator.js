@@ -31,7 +31,13 @@ export async function init() {
 
   const paint = () => {
     const { current } = store;
-    if (userNameElement) userNameElement.textContent = "Shortxx";
+    if (userNameElement) {
+      const name =
+        (current && typeof current.creator === "string" && current.creator.trim()) ||
+        (typeof store.creator === "string" && store.creator.trim()) ||
+        "Shortxx";
+      userNameElement.textContent = name;
+    }
     const tags =
       current && Array.isArray(current.hashtags)
         ? current.hashtags.filter((t) => typeof t === "string" && t.trim())

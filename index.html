@@ -267,6 +267,10 @@
                                             <i class="fas fa-volume-mute sx-rail-mute-icon" aria-hidden="true"></i>
                                             <span class="text-[11px] text-white font-bold text-video-shadow">Sound</span>
                                         </button>
+                                        <button id="sx-rail-install" type="button" aria-label="Install app" class="action-btn flex flex-col items-center gap-0.5 p-1">
+                                            <i class="fas fa-download sx-rail-install-icon" aria-hidden="true"></i>
+                                            <span class="text-[11px] text-white font-bold text-video-shadow">Install</span>
+                                        </button>
                                     </div>
                                     <div class="ntok-chrome absolute left-0 right-[68px] px-4 pointer-events-auto" style="bottom: calc(var(--overlay-info-bottom) + env(safe-area-inset-bottom, 0px));">
                                         <div class="flex items-center gap-2">
@@ -311,16 +315,6 @@
                     </span>
                     <span class="font-medium">Live Cams</span>
                 </a>
-                <button id="install-btn" aria-label="Install app" style="display:none;" class="flex flex-col items-center justify-center gap-0.5 flex-1 h-full text-[10px] text-white/50">
-                    <span class="relative">
-                        <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                            <polyline points="7 10 12 15 17 10"></polyline>
-                            <line x1="12" y1="15" x2="12" y2="3"></line>
-                        </svg>
-                    </span>
-                    <span class="font-medium">Install</span>
-                </button>
                 <button id="more-btn" aria-label="More" aria-expanded="false" class="flex flex-col items-center justify-center gap-0.5 flex-1 h-full text-[10px] text-white/50">
                     <span class="relative">
                         <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
