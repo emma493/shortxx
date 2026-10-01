@@ -1,0 +1,127 @@
+/* css/features/telegram.css — sidebar Telegram button.
+ * Ported from refs/shortieshub_app_fix/style.css:750-853 + index.html:117-128.
+ * Glowing 3D badge + alternating Join/Telegram text. Button-only scope
+ * (no tg-popup-overlay / tracker logic). */
+
+/* --- Glowing 3D Telegram Button & Alternating Text --- */
+.action-btn.telegram-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-decoration: none;
+    cursor: pointer;
+    margin-top: 2px;
+}
+
+/* 3D App Icon Badge (WhatsApp Green Gradient, as in ref) */
+.telegram-icon-badge {
+    position: relative;
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.4);
+    /* Pulsing Scale & Glow Animation */
+    animation: waIconPulse 1.8s infinite ease-in-out;
+}
+
+.telegram-svg {
+    width: 24px;
+    height: 24px;
+    display: block;
+    object-fit: contain;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.25));
+}
+
+/* Pulsing (Size Increment & Decrement with WhatsApp Green Glow) */
+@keyframes waIconPulse {
+    0%, 100% {
+        transform: scale(1);
+        box-shadow: 0 0 6px rgba(37, 211, 102, 0.6), 0 4px 10px rgba(0, 0, 0, 0.4);
+    }
+    50% {
+        transform: scale(1.22);
+        box-shadow: 0 0 18px rgba(37, 211, 102, 1), 0 0 30px rgba(18, 140, 126, 0.8), 0 6px 14px rgba(0, 0, 0, 0.5);
+    }
+}
+
+/* --- Animated Alternating Text ("Join" <-> "Telegram") --- */
+.telegram-text-switcher {
+    position: relative;
+    height: 14px;
+    width: 60px;
+    margin-top: 4px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.tg-text {
+    position: absolute;
+    font-size: 11px;
+    font-weight: 800;
+    color: #ffffff;
+    letter-spacing: 0.3px;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.9), 0 0 8px rgba(255, 255, 255, 0.5);
+    opacity: 0;
+    white-space: nowrap;
+}
+
+/* Cross-fade & Slide Keyframes */
+.text-join {
+    animation: toggleJoin 4s infinite ease-in-out;
+}
+
+.text-app {
+    animation: toggleWhatsApp 4s infinite ease-in-out;
+}
+
+@keyframes toggleJoin {
+    0%, 45% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+    50%, 95% {
+        opacity: 0;
+        transform: translateY(-6px) scale(0.85);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@keyframes toggleWhatsApp {
+    0%, 45% {
+        opacity: 0;
+        transform: translateY(6px) scale(0.85);
+    }
+    50%, 95% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+    100% {
+        opacity: 0;
+        transform: translateY(6px) scale(0.85);
+    }
+}
+
+.action-btn.telegram-btn:focus-visible {
+    outline: 2px solid rgba(255, 255, 255, 0.8);
+    outline-offset: 2px;
+    border-radius: 8px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .telegram-icon-badge,
+    .text-join,
+    .text-app {
+        animation: none;
+    }
+    .text-join {
+        opacity: 1;
+    }
+}
