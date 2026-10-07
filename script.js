@@ -335,6 +335,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     try {
       const geo = await resolveCountry();
       window.shortxxCountry = geo.code;
+      window.shortxxCountrySource = geo.source;
     } catch (e) {}
     upsertUserTelemetry(telemetryUid, { authProvider: provider });
   }

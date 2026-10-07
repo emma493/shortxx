@@ -791,34 +791,63 @@ export function detectAppType() {
 export function classifyReferral() {
   try {
     const params = new URLSearchParams(location.search || "");
-    const utm = (params.get("utm_source") || "").toLowerCase();
+    const utm_source = (params.get("utm_source") || "").slice(0, 80);
+    const utm_medium = (params.get("utm_medium") || "").slice(0, 80);
+    const utm_campaign = (params.get("utm_campaign") || "").slice(0, 80);
+    const utm = utm_source.toLowerCase();
     const ref = document.referrer || "";
     let host = "";
     try { host = ref ? new URL(ref).hostname.toLowerCase() : ""; } catch (e) { host = ref.toLowerCase(); }
-    const raw = ref || (utm ? utm : "Direct");
-    if (utm.includes("google") || host.includes("google")) return { group: "Google", raw: raw || "google" };
-    if (!ref && !utm) return { group: "Direct", raw: "Direct" };
+    const raw = ref || (utm_source ? utm_source : "Direct");
+    const base = { host: host.slice(0, 120), utm_source, utm_medium, utm_campaign };
+    if (host && host === location.hostname) return { group: "Direct", raw: "Direct", ...base };
+    if (utm.includes("google") || host.includes("google")) return { group: "Google", raw: (raw || "google").slice(0, 120), ...base };
+    if (!ref && !utm_source) return { group: "Direct", raw: "Direct", ...base };
     if (/facebook|instagram|tiktok|twitter|x\.com|youtube|snap|whatsapp|telegram/.test(utm + " " + host)) {
-      return { group: "Social", raw: raw.slice(0, 120) || "Social" };
+      return { group: "Social", raw: raw.slice(0, 120) || "Social", ...base };
     }
-    if (host && host !== location.hostname) return { group: "Organic", raw: host.slice(0, 120) };
-    if (utm) return { group: "Organic", raw: utm.slice(0, 120) };
-    return { group: "Direct", raw: (raw || "Direct").slice(0, 120) };
+    if (host && host !== location.hostname) return { group: "Organic", raw: host.slice(0, 120), ...base };
+    if (utm_source) return { group: "Organic", raw: utm_source.slice(0, 120), ...base };
+    return { group: "Direct", raw: (raw || "Direct").slice(0, 120), ...base };
   } catch (e) {
-    return { group: "Direct", raw: "Direct" };
+    return { group: "Direct", raw: "Direct", host: "", utm_source: "", utm_medium: "", utm_campaign: "" };
   }
 }
 
 let _cachedCountry = null;
 
+const TZ_COUNTRY_HINTS = [
+  ["accra", "GH"], ["lagos", "NG"], ["nairobi", "KE"], ["johannesburg", "ZA"],
+  ["cairo", "EG"], ["abidjan", "CI"], ["dakar", "SN"], ["casablanca", "MA"],
+  ["london", "GB"], ["paris", "FR"], ["berlin", "DE"], ["amsterdam", "NL"],
+  ["new_york", "US"], ["chicago", "US"], ["los_angeles", "US"], ["toronto", "CA"],
+  ["dubai", "AE"], ["tokyo", "JP"], ["singapore", "SG"], ["mumbai", "IN"],
+];
+
 export async function resolveCountry() {
   if (_cachedCountry) return _cachedCountry;
-  // 1. Timezone heuristic (offline, free): Accra/Africa -> GH.
+  // 1. Timezone heuristic (offline, free): e.g. Africa/Accra -> GH.
   try {
     const tz = (Intl.DateTimeFormat().resolvedOptions().timeZone || "").toLowerCase();
-    if (tz.includes("accra")) { _cachedCountry = { code: "GH", source: "client-locale" }; return _cachedCountry; }
+    if (tz) {
+      for (const [frag, code] of TZ_COUNTRY_HINTS) {
+        if (tz.includes(frag)) { _cachedCountry = { code, source: "client-locale" }; return _cachedCountry; }
+      }
+      // Bare "africa/<city>" without a mapped city still hints at the continent —
+      // keep GH default but flag low confidence via client-locale source.
+      if (tz.startsWith("africa/")) { _cachedCountry = { code: "GH", source: "client-locale" }; return _cachedCountry; }
+    }
   } catch (e) {}
-  // 2. Optional ip-api lookup (country code only, fail-soft to GH).
+  // 2. Browser locale region hint (offline, free): e.g. en-NG -> NG.
+  try {
+    const lang = (navigator.language || "").toUpperCase();
+    const m = lang.match(/-([A-Z]{2})$/);
+    if (m && m[1] && m[1] !== "US" && /^[A-Z]{2}$/.test(m[1])) {
+      _cachedCountry = { code: m[1], source: "client-locale" };
+      return _cachedCountry;
+    }
+  } catch (e) {}
+  // 3. Optional ip-api lookup (country code only, fail-soft to GH).
   try {
     const ctrl = new AbortController();
     const t = setTimeout(() => ctrl.abort(), 2500);
@@ -840,17 +869,62 @@ export function authProviderLabel(user) {
   return "guest";
 }
 
-/* Guest-only: no per-user telemetry docs. Stubs kept for legacy imports. */
+/** Upsert merge-safe user doc: presence + device/platform/auth/geo.
+ * NOTE: firstSeen is intentionally NOT written here — merge:true would
+ * overwrite it on every 25 s heartbeat, destroying the original value the
+ * Admin date-range filter depends on. First-seen defaults are applied
+ * read-side (Admin subscribeToUsers falls back to `new Date()`). */
 export async function upsertUserTelemetry(uid, extra) {
-  return;
+  if (!uid) return;
+  try {
+    const appType = detectAppType();
+    const { group, raw, host, utm_source, utm_medium, utm_campaign } = classifyReferral();
+    const geo = await resolveCountry();
+    await setDoc(doc(db, "users", uid), {
+      userId: uid,
+      deviceType: detectDeviceType(),
+      appType: appType,
+      isPWA: appType === "PWA",
+      trafficSource: raw,
+      referralGroup: group,
+      referrerHost: (host || "").slice(0, 120),
+      utmSource: utm_source || "",
+      utmMedium: utm_medium || "",
+      utmCampaign: utm_campaign || "",
+      landingPage: (location.pathname + location.search).slice(0, 200),
+      country: geo.code,
+      countrySource: geo.source,
+      status: "Online",
+      lastActive: serverTimestamp(),
+      currentPage: location.pathname + location.search,
+      authProvider: (extra && extra.authProvider) || "guest",
+    }, { merge: true });
+  } catch (err) {
+    console.warn("User telemetry upsert failed:", err);
+  }
 }
 
+/** Increment engagement counters without overwriting profile fields. */
 export async function incrementUserCounters(uid, counters) {
-  return;
+  if (!uid || !counters) return;
+  try {
+    const payload = { lastActive: serverTimestamp(), status: "Online" };
+    if (counters.watchSeconds) payload.totalDurationSeconds = increment(counters.watchSeconds);
+    if (counters.completed) payload.videosWatched = increment(1);
+    if (counters.saveDelta) payload.totalSaves = increment(counters.saveDelta);
+    if (counters.downloadDelta) payload.totalDownloads = increment(counters.downloadDelta);
+    await setDoc(doc(db, "users", uid), payload, { merge: true });
+  } catch (err) {
+    console.warn("User counter increment failed:", err);
+  }
 }
 
+/** Mark user offline on tab hide (best-effort; heartbeat is source of truth). */
 export async function markUserOffline(uid) {
-  return;
+  if (!uid) return;
+  try {
+    await setDoc(doc(db, "users", uid), { status: "Offline", lastActive: serverTimestamp() }, { merge: true });
+  } catch (err) {}
 }
 
 /* Guest-only: comments removed. Stubs kept for legacy imports. */

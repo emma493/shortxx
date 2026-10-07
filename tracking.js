@@ -63,20 +63,34 @@ function detectAppType() {
   return "Browser";
 }
 
-function classifyReferralGroup() {
+function parseReferral() {
   try {
     const params = new URLSearchParams(location.search || "");
-    const utm = (params.get("utm_source") || "").toLowerCase();
+    const utm_source = (params.get("utm_source") || "").slice(0, 80);
+    const utm_medium = (params.get("utm_medium") || "").slice(0, 80);
+    const utm_campaign = (params.get("utm_campaign") || "").slice(0, 80);
+    const click_id = params.get("gclid") || params.get("fbclid") || params.get("msclkid") || "";
+    const utm = utm_source.toLowerCase();
     const ref = document.referrer || "";
     let host = "";
     try { host = ref ? new URL(ref).hostname.toLowerCase() : ""; } catch (e) { host = ref.toLowerCase(); }
-    if (utm.includes("google") || host.includes("google")) return "Google";
-    if (!ref && !utm) return "Direct";
-    if (/facebook|instagram|tiktok|twitter|x\.com|youtube|snap|whatsapp|telegram/.test(utm + " " + host)) return "Social";
-    return "Organic";
+    // Internal navigation (same host) counts as Direct, not Organic.
+    let selfHost = "";
+    try { selfHost = (location.hostname || "").toLowerCase(); } catch (e) {}
+    if (host && selfHost && host === selfHost) {
+      return { group: "Direct", host: host.slice(0, 120), utm_source, utm_medium, utm_campaign, click_id: String(click_id).slice(0, 80) };
+    }
+    if (utm.includes("google") || host.includes("google")) return { group: "Google", host: host.slice(0, 120), utm_source, utm_medium, utm_campaign, click_id: String(click_id).slice(0, 80) };
+    if (!ref && !utm_source) return { group: "Direct", host: "", utm_source, utm_medium, utm_campaign, click_id: "" };
+    if (/facebook|instagram|tiktok|twitter|x\.com|youtube|snap|whatsapp|telegram/.test(utm + " " + host)) return { group: "Social", host: host.slice(0, 120), utm_source, utm_medium, utm_campaign, click_id: String(click_id).slice(0, 80) };
+    return { group: "Organic", host: host.slice(0, 120), utm_source, utm_medium, utm_campaign, click_id: String(click_id).slice(0, 80) };
   } catch (e) {
-    return "Direct";
+    return { group: "Direct", host: "", utm_source: "", utm_medium: "", utm_campaign: "", click_id: "" };
   }
+}
+
+function classifyReferralGroup() {
+  return parseReferral().group;
 }
 
 async function recordView(videoId) {
@@ -99,6 +113,7 @@ async function recordView(videoId) {
 
   // Log granular video_view event for the 24H analytics filter
   // userId bridges to the signed-in identity when script.js has set one.
+  const _ref = parseReferral();
   eventsRef.add({
     event_type: "video_view",
     video_id: videoId,
@@ -106,8 +121,14 @@ async function recordView(videoId) {
     user_agent: navigator.userAgent || "",
     device_type: detectDeviceType(),
     app_type: detectAppType(),
-    referral_group: classifyReferralGroup(),
+    referral_group: _ref.group,
+    referrer_host: _ref.host || "Direct",
+    utm_source: _ref.utm_source || "",
+    utm_medium: _ref.utm_medium || "",
+    utm_campaign: _ref.utm_campaign || "",
+    landing_page: (location.pathname + location.search).slice(0, 200),
     country: (window.shortxxCountry || "GH"),
+    country_source: (window.shortxxCountrySource || "client-locale"),
     referrer: document.referrer || "Direct",
     timestamp: firebase.firestore.FieldValue.serverTimestamp(),
     createdAt: new Date().toISOString() // Backup ISO string for legacy queries
