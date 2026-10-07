@@ -163,12 +163,13 @@
   opacity: 1;
 }
 
-/* "See more" sponsor pill beside the @username: transparent glassmorphism
+/* "Join my Livestream" pill beside the @username: transparent glassmorphism
  * with a silver glow. Pointer-events live on the button itself (the parent
  * overlay is pointer-events-none; the chrome row re-enables them). */
 .sx-see-more {
   display: inline-flex;
   align-items: center;
+  gap: 7px;
   flex: none;
   min-height: 28px;
   padding: 4px 12px;
@@ -201,6 +202,36 @@
 .sx-see-more:focus-visible {
   outline: 2px solid rgba(255, 255, 255, 0.8);
   outline-offset: 2px;
+}
+
+/* "LIVE" indicator dot inside the Join-my-Livestream pill: glowing pink
+ * pulse that reads as a real live broadcast (CTR cue). Static pink dot
+ * under prefers-reduced-motion. */
+.sx-live-dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 9999px;
+  background: #FF2B55;
+  box-shadow:
+    0 0 8px 2px rgba(255, 43, 85, 0.8),
+    0 0 18px 4px rgba(255, 43, 85, 0.35);
+  animation: sx-live-pulse 1.6s ease-in-out infinite;
+}
+@keyframes sx-live-pulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.35);
+    opacity: 0.75;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sx-live-dot {
+    animation: none;
+  }
 }
 
 /* Rail mute + install buttons below Share (previous-version FA icons). */
