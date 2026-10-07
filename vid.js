@@ -743,6 +743,24 @@ export function getAllVideos() {
   return [...fetchedVideos];
 }
 
+/** Girls-only creative pool for the skippable video-ad unit.
+ * Reads the UNFILTERED raw pool (ignores the viewer's Girls/Couples/All
+ * preference — promos are ads, not content), excludes the currently playing
+ * video and anything without a playable URL. Shuffled per call; the caller
+ * owns no-repeat rotation. Empty array = never show (never mislabel). */
+export function getPromoPool() {
+  const cur = currentVideo && currentVideo.id ? currentVideo.id : null;
+  const out = [];
+  for (const v of allRawVideos) {
+    if (!v || !v.url) continue;
+    const c = v.creatorCategory || v.category;
+    if (c !== "girls") continue;
+    if (cur && v.id === cur) continue;
+    out.push(v);
+  }
+  return shuffleArray(out);
+}
+
 /** Jump the rotation to a specific pool index (Discover picks). */
 export function jumpToIndex(i) {
   if (!fetchedVideos.length) return;

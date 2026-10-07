@@ -168,3 +168,24 @@ window.trackVideoView = async function (videoId) {
 
   await recordView(videoId);
 };
+
+// Promo-ad funnel events for the skippable Girls video-ad unit
+// (videoad.js). Fire-and-forget; visible in Admin live activity + CSV.
+window.trackPromoEvent = function (type, videoId) {
+  if (type !== "promo_impression" && type !== "promo_click" && type !== "promo_skip") return;
+  if (!window.shortxxDb) return;
+  try {
+    window.shortxxDb.collection("events").add({
+      event_type: type,
+      video_id: videoId || "",
+      userId: window.shortxxIdentity || "ANONYMOUS",
+      user_agent: navigator.userAgent || "",
+      device_type: detectDeviceType(),
+      country: (window.shortxxCountry || "GH"),
+      country_source: (window.shortxxCountrySource || "client-locale"),
+      referrer: document.referrer || "Direct",
+      timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+      createdAt: new Date().toISOString()
+    });
+  } catch (e) {}
+};

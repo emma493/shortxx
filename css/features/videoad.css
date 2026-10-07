@@ -1,0 +1,134 @@
+/* css/features/videoad.css — skippable Girls video-ad interstitial.
+ * In-player overlay: dimmed promo video, Ad pill, locked countdown chip,
+ * pulsing CTA bar. High-contrast, thumb-friendly, mobile-first. */
+
+#player-region.sx-videoad-host {
+  position: relative;
+}
+
+.sx-videoad {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  background: rgba(0, 0, 0, 0.55);
+  overflow: hidden;
+  animation: sx-videoad-in 0.28s ease-out;
+}
+
+@keyframes sx-videoad-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.sx-videoad-media {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  background: #000;
+}
+
+.sx-videoad-top {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  margin-bottom: auto;
+}
+
+.sx-videoad-pill {
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #0b0b0e;
+  background: #ffd60a;
+  border-radius: 6px;
+  padding: 3px 8px;
+}
+
+.sx-videoad-skip {
+  min-width: 92px;
+  font-size: 13px;
+  font-weight: 800;
+  color: rgba(255, 255, 255, 0.75);
+  background: rgba(10, 10, 14, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 999px;
+  padding: 8px 14px;
+  cursor: default;
+  font-variant-numeric: tabular-nums;
+}
+
+.sx-videoad-skip.ready {
+  color: #0b0b0e;
+  background: #fff;
+  border-color: #fff;
+  cursor: pointer;
+}
+
+.sx-videoad-cta {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 0 12px 14px;
+  padding: 13px 16px;
+  font-size: 15px;
+  font-weight: 900;
+  color: #fff;
+  background: #ff2b55;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  box-shadow: 0 6px 24px rgba(255, 43, 85, 0.45);
+  animation: sx-videoad-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes sx-videoad-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    box-shadow: 0 6px 24px rgba(255, 43, 85, 0.45);
+  }
+  50% {
+    transform: scale(1.025);
+    box-shadow: 0 6px 32px rgba(255, 43, 85, 0.65);
+  }
+}
+
+.sx-videoad-cta-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  background: #fff;
+  animation: sx-videoad-blink 1s steps(2, start) infinite;
+}
+
+@keyframes sx-videoad-blink {
+  to {
+    visibility: hidden;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sx-videoad,
+  .sx-videoad-cta,
+  .sx-videoad-cta-dot {
+    animation: none;
+  }
+}
