@@ -3,20 +3,22 @@
  * The old index<->vid2 page-flip re-ran every ad script per video. The swipe
  * feed never reloads, so without this each banner would earn exactly one
  * impression per session. This module replays each ad CODE individually on a
- * dual trigger (approved plan):
- *   - every 3rd video change, OR
+ * dual trigger:
+ *   - EVERY video change (publisher directive 2026-10-07: max volume), OR
  *   - every 60 s of continuous playing-and-visible watch time (covers users
  *     who sit on one video),
- * with a 30 s global floor between batches (account safety: never faster).
+ * with a 10 s global floor between batches (anti-overlap: swipe-spam cannot
+ * stack batches). NOTE: aggressive auto-refresh elevates invalid-traffic
+ * flag risk with the ad network — watch its dashboard for warnings.
  *
  * Serialized queue: all banner slots share the global `atOptions`, so slots
  * re-inject strictly one at a time — never overlapping, never mixed keys.
  * Social Bar / pop / tab-guard scripts are NEVER touched (persistent formats).
  * First impression always comes from the static index.html markup. */
 
-const VIDEOS_PER_BATCH = 3;
+const VIDEOS_PER_BATCH = 1;
 const WATCH_SECONDS_PER_BATCH = 60;
-const MIN_BATCH_GAP_MS = 30000;
+const MIN_BATCH_GAP_MS = 10000;
 const TICK_MS = 5000;
 
 let slots = [];
@@ -26,6 +28,8 @@ let watchAccum = 0;
 let lastBatchAt = 0;
 let batches = 0;
 let lastTime = -1;
+// Recent batch log for verification (window.sxAdsStats): last 30 entries.
+let batchLog = [];
 
 function collectSlots() {
   const found = [];
@@ -105,6 +109,10 @@ function runBatch(reason) {
   videosSinceBatch = 0;
   watchAccum = 0;
   batches++;
+  try {
+    batchLog.push({ t: lastBatchAt, reason });
+    if (batchLog.length > 30) batchLog.splice(0, batchLog.length - 30);
+  } catch (e) {}
   slots.forEach((s) => {
     queue = queue.then(() => refreshSlot(s));
   });
@@ -161,5 +169,5 @@ export async function init() {
     if (maybeBatch()) runBatch("manual");
     return batches;
   };
-  window.sxAdsStats = () => ({ batches, slots: slots.length, videosSinceBatch, watchAccum });
+  window.sxAdsStats = () => ({ batches, slots: slots.length, videosSinceBatch, watchAccum, recentBatches: batchLog.slice() });
 }
