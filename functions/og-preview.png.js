@@ -1,10 +1,14 @@
-// Serves the baked global link-preview thumbnail (Admin Photo page).
+// Redirect shim for the global link-preview thumbnail (Admin Photo page).
 //
-// Source of truth is Firestore `site_config/og_preview.imageData` — a
-// 1200x630 JPEG dataURL composited in the Admin browser (photo + play
-// button + duration pill). No Firebase Storage involved (Spark-plan safe).
-// og:image / twitter:image point here; crawlers download these bytes.
+// Source of truth is Firestore `site_config/og_preview.imageUrl` — the baked
+// 1200x630 thumbnail (photo + play button + duration pill) hosted on
+// Cloudinary CDN. This route 302-redirects there so the static index.html
+// default (`/og-preview.png`) and any old shares keep working with no
+// redeploy after each publish. Every publish is a brand-new Cloudinary
+// asset, so crawler caches bust themselves.
 //
+// Legacy: docs published before the Cloudinary switch carry baked bytes
+// inline (`imageData` dataURL) — those are still served directly.
 // Fallback: if the doc is missing/unreadable, serve the static logo.png.
 
 const PROJECT_ID = 'shortxx-live';
@@ -56,21 +60,37 @@ export async function onRequest(context) {
     });
     if (!apiRes.ok) return fallbackLogo(request.url);
     const doc = await apiRes.json();
-    const dataUrl = doc?.fields?.imageData?.stringValue || '';
-    if (!dataUrl) return fallbackLogo(request.url);
-    const parsed = dataUrlToBytes(dataUrl.trim());
-    if (!parsed) return fallbackLogo(request.url);
+    const fields = doc?.fields || {};
 
-    const headers = {
-      'Content-Type': parsed.mime,
-      // Crawlers cache aggressively; the og:image URL carries ?v=<timestamp>
-      // so each publish busts the cache while repeats stay CDN-hot.
-      'Cache-Control': 'public, max-age=3600, s-maxage=3600, stale-while-revalidate=86400',
-      'Access-Control-Allow-Origin': '*',
-      'X-Content-Type-Options': 'nosniff',
-    };
-    if (request.method === 'HEAD') return new Response(null, { headers });
-    return new Response(parsed.bytes, { headers });
+    // Primary (Cloudinary era): redirect to the CDN URL.
+    const imageUrl = fields?.imageUrl?.stringValue || '';
+    if (/^https:\/\/res\.cloudinary\.com\//.test(imageUrl.trim())) {
+      const headers = {
+        Location: imageUrl.trim(),
+        // Short cache: each publish is a new URL, so the redirect target
+        // changes — crawlers re-resolve quickly while repeats stay fast.
+        'Cache-Control': 'public, max-age=300, s-maxage=300',
+        'Access-Control-Allow-Origin': '*',
+      };
+      return new Response(null, { status: 302, headers });
+    }
+
+    // Legacy (pre-Cloudinary) docs: serve the inline baked bytes.
+    const dataUrl = fields?.imageData?.stringValue || '';
+    if (dataUrl) {
+      const parsed = dataUrlToBytes(dataUrl.trim());
+      if (parsed) {
+        const headers = {
+          'Content-Type': parsed.mime,
+          'Cache-Control': 'public, max-age=3600, s-maxage=3600, stale-while-revalidate=86400',
+          'Access-Control-Allow-Origin': '*',
+          'X-Content-Type-Options': 'nosniff',
+        };
+        if (request.method === 'HEAD') return new Response(null, { headers });
+        return new Response(parsed.bytes, { headers });
+      }
+    }
+    return fallbackLogo(request.url);
   } catch {
     return fallbackLogo(request.url);
   }

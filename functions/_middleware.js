@@ -2,9 +2,11 @@
 //
 // Two jobs:
 // 1. Link-preview bots (X/Twitter, Facebook, Telegram, WhatsApp, …) fetching
-//    the homepage get OG HTML whose og:image / twitter:image point at the
-//    baked thumbnail (/og-preview.png?v=<publish-time>) managed on the Admin
-//    Photo page. Humans are passed through untouched (zero perf impact).
+//    the homepage get OG HTML whose og:image / twitter:image point directly
+//    at the baked thumbnail on Cloudinary CDN (managed on the Admin Photo
+//    page). Each publish is a brand-new Cloudinary asset, so crawler caches
+//    bust themselves — no version param needed. Humans are passed through
+//    untouched (zero perf impact).
 // 2. Everything else falls through; removed routes (/creator/*, /@*, …) are
 //    handled by _redirects → 404.html as before.
 
@@ -16,22 +18,23 @@ const PROJECT_ID = 'shortxx-live';
 const FIRESTORE_KEY = 'AIzaSyBQoIKWaWPKg8luwCjpN8LPaTd-43A1Vqo';
 const META_URL =
   `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)` +
-  `/documents/site_config/og_preview?key=${FIRESTORE_KEY}&mask.fieldPaths=updatedAt`;
+  `/documents/site_config/og_preview?key=${FIRESTORE_KEY}&mask.fieldPaths=imageUrl`;
+const FALLBACK_IMG = 'https://shortxx.live/og-preview.png';
 
-async function previewVersion() {
+async function previewImageUrl() {
   try {
     const res = await fetch(META_URL, {
       headers: { Accept: 'application/json' },
       signal: AbortSignal.timeout(4000),
     });
-    if (!res.ok) return '';
+    if (!res.ok) return FALLBACK_IMG;
     const doc = await res.json();
-    // Prefer doc.updateTime (always present); fall back to the field value.
-    const raw = doc?.updateTime || doc?.fields?.updatedAt?.timestampValue || '';
-    const ms = raw ? Date.parse(raw) : NaN;
-    return Number.isFinite(ms) ? String(ms) : '';
+    const u = doc?.fields?.imageUrl?.stringValue || '';
+    // Only trust Cloudinary CDN URLs; anything else falls back to the
+    // redirect shim (which also serves legacy inline-byte docs + logo).
+    return /^https:\/\/res\.cloudinary\.com\//.test(u.trim()) ? u.trim() : FALLBACK_IMG;
   } catch {
-    return '';
+    return FALLBACK_IMG;
   }
 }
 
@@ -65,14 +68,13 @@ export async function onRequest(context) {
     if (!ct.includes('text/html')) return res;
 
     const html = await res.text();
-    const v = await previewVersion();
-    const imgUrl = `https://shortxx.live/og-preview.png${v ? `?v=${v}` : ''}`;
+    const imgUrl = await previewImageUrl();
     const out = rewriteOgImages(html, imgUrl);
 
     const headers = new Headers(res.headers);
     headers.set('Content-Type', 'text/html;charset=UTF-8');
-    // Short edge cache: each publish bumps ?v= so crawlers re-fetch the new
-    // bytes, while repeat scrapes within minutes stay fast.
+    // Short edge cache: each publish is a new Cloudinary URL, so crawlers
+    // pick up the new image on next scrape while repeats stay fast.
     headers.set('Cache-Control', 'public, max-age=60, s-maxage=300');
     headers.set('Vary', 'User-Agent');
     return new Response(out, { status: res.status, headers });
