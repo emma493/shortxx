@@ -1,7 +1,7 @@
 /* Shortxx service worker — app-shell caching only.
  * Video streams (HLS/mp4), Firestore traffic, analytics and ad networks
  * always go straight to the network so playback and data stay fresh. */
-const CACHE = "shortxx-v11";
+const CACHE = "shortxx-v12";
 const SHELL = [
   "/",
   "/index.html",
@@ -75,6 +75,8 @@ self.addEventListener("activate", (event) => {
 
 function isBypass(url) {
   return (
+    // Per-visitor edge APIs must never be cached or served cross-visitor.
+    url.includes("/api/") ||
     url.includes("firestore.googleapis.com") ||
     url.includes("firebaseinstallations.googleapis.com") ||
     url.includes("googletagmanager.com") ||

@@ -93,8 +93,28 @@ function classifyReferralGroup() {
   return parseReferral().group;
 }
 
+// Country readiness gate: main.js (modular path) and script.js (legacy
+// path) resolve window.shortxxCountry right after boot. The first play can
+// happen before that, which used to log every early view as "GH". Wait up
+// to ~800ms for the real (edge-first) country; the safety timeout resolves
+// anyway so views are never dropped for geo. Absent gate = legacy behavior.
+function readyCountry() {
+  try {
+    if (window.shortxxCountry) return Promise.resolve();
+    if (window.shortxxCountryReady && typeof window.shortxxCountryReady.then === "function") {
+      return Promise.race([
+        window.shortxxCountryReady,
+        new Promise((resolve) => setTimeout(resolve, 800)),
+      ]);
+    }
+  } catch (e) {}
+  return Promise.resolve();
+}
+
 async function recordView(videoId) {
   if (!videoId || !window.shortxxDb) return;
+
+  await readyCountry();
 
   const docRef = window.shortxxDb.collection("videos").doc(videoId);
   const eventsRef = window.shortxxDb.collection("events");

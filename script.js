@@ -324,7 +324,8 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // --- 4c. Users-tab telemetry: identity doc + presence heartbeat + watch time ---
   // Stable uid: Firebase uid when signed in, else device-local guest name.
-  // No raw IPs stored — country resolved client-side (timezone + ip-api fallback).
+  // No raw IPs stored — country resolved edge-first (/api/country) with
+  // timezone + ip-api fallbacks.
   let telemetryUid = null;
   let completedForVideo = null;
   let watchAccumSec = 0;
@@ -337,7 +338,31 @@ document.addEventListener("DOMContentLoaded", async () => {
       window.shortxxCountry = geo.code;
       window.shortxxCountrySource = geo.source;
     } catch (e) {}
+    // Signal country readiness so tracking.js stops logging GH defaults on
+    // early views. Resolved exactly once per page load; late views are safe.
+    if (!window._shortxxCountryDone) {
+      window._shortxxCountryDone = true;
+      if (window._shortxxCountryResolve) {
+        try { window._shortxxCountryResolve(); } catch (e) {}
+        window._shortxxCountryResolve = null;
+      }
+    }
     upsertUserTelemetry(telemetryUid, { authProvider: provider });
+  }
+
+  // Country-ready gate: tracking.js awaits this (max ~800ms) before logging
+  // the first video_view, so early plays carry the edge country, not "GH".
+  // Safety timeout resolves anyway — views must never be dropped for geo.
+  if (!window.shortxxCountryReady) {
+    window.shortxxCountryReady = new Promise((resolve) => {
+      window._shortxxCountryResolve = resolve;
+      setTimeout(() => {
+        if (window._shortxxCountryResolve) {
+          try { window._shortxxCountryResolve(); } catch (e) {}
+          window._shortxxCountryResolve = null;
+        }
+      }, 800);
+    });
   }
 
   // Initial guest identity (upgraded to uid on sign-in via onAuthStateChanged).

@@ -826,6 +826,22 @@ const TZ_COUNTRY_HINTS = [
 
 export async function resolveCountry() {
   if (_cachedCountry) return _cachedCountry;
+  // 0. Edge geo (authoritative): same-origin Cloudflare Pages Function reads
+  // request.cf.country off the visitor IP. Unblockable, sub-100ms on site.
+  // Local/dev hosts have no edge — "XX"/failure falls through silently.
+  try {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 1500);
+    const res = await fetch("/api/country", { signal: ctrl.signal, cache: "no-store" });
+    clearTimeout(t);
+    if (res.ok) {
+      const j = await res.json();
+      if (j && typeof j.code === "string" && /^[A-Za-z]{2}$/.test(j.code) && j.code.toUpperCase() !== "XX") {
+        _cachedCountry = { code: j.code.toUpperCase(), source: "edge" };
+        return _cachedCountry;
+      }
+    }
+  } catch (e) {}
   // 1. Timezone heuristic (offline, free): e.g. Africa/Accra -> GH.
   try {
     const tz = (Intl.DateTimeFormat().resolvedOptions().timeZone || "").toLowerCase();

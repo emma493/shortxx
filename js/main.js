@@ -4,6 +4,7 @@ import {
   didVideosLoad,
   getLastLoadError,
   getVideoCount,
+  resolveCountry,
 } from "../vid.js";
 import { store, publishIdentity } from "./store.js";
 import { makeToast } from "./lib/dom.js";
@@ -95,6 +96,40 @@ document.addEventListener("DOMContentLoaded", async () => {
   // 1. Wire up the UI FIRST so every button is clickable instantly,
   // then fill in the videos in the background.
   publishIdentity();
+
+  // 1b. Country early-boot (edge-first via /api/country): tracking.js
+  // video_view events read window.shortxxCountry at play time. Resolve NOW,
+  // fire-and-forget, so the first play logs the real country instead of the
+  // "GH" default. The readiness gate lets tracking.js wait up to ~800ms for
+  // this; the safety timeout resolves anyway so views are never dropped.
+  // The telemetry feature (step 4) reuses the cached value for user docs.
+  if (!window.shortxxCountryReady) {
+    window.shortxxCountryReady = new Promise((resolve) => {
+      window._shortxxCountryResolve = resolve;
+      setTimeout(() => {
+        try {
+          if (window._shortxxCountryResolve) window._shortxxCountryResolve();
+        } catch (e) {}
+        window._shortxxCountryResolve = null;
+      }, 800);
+    });
+  }
+  resolveCountry().then(
+    (geo) => {
+      try {
+        window.shortxxCountry = geo.code;
+        window.shortxxCountrySource = geo.source;
+        if (window._shortxxCountryResolve) window._shortxxCountryResolve();
+      } catch (e) {}
+      window._shortxxCountryResolve = null;
+    },
+    () => {
+      try {
+        if (window._shortxxCountryResolve) window._shortxxCountryResolve();
+      } catch (e) {}
+      window._shortxxCountryResolve = null;
+    }
+  );
 
   const videosReady = () => window.dispatchEvent(new CustomEvent("sx:videos-ready"));
   const load = (async () => {
