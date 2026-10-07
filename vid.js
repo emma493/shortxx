@@ -826,23 +826,77 @@ const TZ_COUNTRY_HINTS = [
 
 export async function resolveCountry() {
   if (_cachedCountry) return _cachedCountry;
-  // 0. Edge geo (authoritative): same-origin Cloudflare Pages Function reads
-  // request.cf.country off the visitor IP. Unblockable, sub-100ms on site.
-  // Local/dev hosts have no edge — "XX"/failure falls through silently.
-  try {
-    const ctrl = new AbortController();
-    const t = setTimeout(() => ctrl.abort(), 1500);
-    const res = await fetch("/api/country", { signal: ctrl.signal, cache: "no-store" });
-    clearTimeout(t);
-    if (res.ok) {
+  // IP-based providers raced in PARALLEL (first valid code wins, 3 s cap).
+  // Edge is same-origin/unblockable but only exists on Cloudflare Pages
+  // (currently 404 in prod — kept first so it wins automatically if the
+  // host ever serves functions). ipapi.co + ipwho.is cover adblock users
+  // that block ip-api.com. Country code only, nothing identifying.
+  // Local/dev hosts fail all four silently and fall through to hints below.
+  const validCode = (s) => typeof s === "string" && /^[A-Za-z]{2}$/.test(s) && s.toUpperCase() !== "XX" ? s.toUpperCase() : null;
+  const racers = [
+    (async () => {
+      const res = await fetch("/api/country", { cache: "no-store" });
+      if (!res.ok) throw 0;
       const j = await res.json();
-      if (j && typeof j.code === "string" && /^[A-Za-z]{2}$/.test(j.code) && j.code.toUpperCase() !== "XX") {
-        _cachedCountry = { code: j.code.toUpperCase(), source: "edge" };
-        return _cachedCountry;
-      }
-    }
+      const code = validCode(j && j.code);
+      if (!code) throw 0;
+      return { code, source: "edge" };
+    })(),
+    (async () => {
+      const res = await fetch("https://ipapi.co/country/");
+      if (!res.ok) throw 0;
+      const code = validCode((await res.text()).trim());
+      if (!code) throw 0;
+      return { code, source: "ip-api" };
+    })(),
+    (async () => {
+      const res = await fetch("https://ipwho.is/?fields=country_code");
+      if (!res.ok) throw 0;
+      const j = await res.json();
+      const code = validCode(j && (j.country_code || j.countryCode));
+      if (!code) throw 0;
+      return { code, source: "ip-api" };
+    })(),
+    (async () => {
+      const res = await fetch("https://ip-api.com/json/?fields=countryCode");
+      if (!res.ok) throw 0;
+      const j = await res.json();
+      const code = validCode(j && j.countryCode);
+      if (!code) throw 0;
+      return { code, source: "ip-api" };
+    })(),
+  ];
+  try {
+    const winner = await new Promise((resolve, reject) => {
+      let pending = racers.length;
+      let done = false;
+      const to = setTimeout(() => {
+        if (!done) { done = true; reject(0); }
+      }, 3000);
+      racers.forEach((p) => {
+        Promise.resolve(p).then(
+          (v) => {
+            if (!done) {
+              done = true;
+              clearTimeout(to);
+              resolve(v);
+            }
+          },
+          () => {
+            pending -= 1;
+            if (pending <= 0 && !done) {
+              done = true;
+              clearTimeout(to);
+              reject(0);
+            }
+          }
+        );
+      });
+    });
+    _cachedCountry = winner;
+    return _cachedCountry;
   } catch (e) {}
-  // 1. Timezone heuristic (offline, free): e.g. Africa/Accra -> GH.
+  // Offline hints (free, instant): timezone city map, then locale region.
   try {
     const tz = (Intl.DateTimeFormat().resolvedOptions().timeZone || "").toLowerCase();
     if (tz) {
@@ -854,27 +908,12 @@ export async function resolveCountry() {
       if (tz.startsWith("africa/")) { _cachedCountry = { code: "GH", source: "client-locale" }; return _cachedCountry; }
     }
   } catch (e) {}
-  // 2. Browser locale region hint (offline, free): e.g. en-NG -> NG.
   try {
     const lang = (navigator.language || "").toUpperCase();
     const m = lang.match(/-([A-Z]{2})$/);
     if (m && m[1] && m[1] !== "US" && /^[A-Z]{2}$/.test(m[1])) {
       _cachedCountry = { code: m[1], source: "client-locale" };
       return _cachedCountry;
-    }
-  } catch (e) {}
-  // 3. Optional ip-api lookup (country code only, fail-soft to GH).
-  try {
-    const ctrl = new AbortController();
-    const t = setTimeout(() => ctrl.abort(), 2500);
-    const res = await fetch("https://ip-api.com/json/?fields=countryCode", { signal: ctrl.signal });
-    clearTimeout(t);
-    if (res.ok) {
-      const j = await res.json();
-      if (j && typeof j.countryCode === "string" && j.countryCode.length === 2) {
-        _cachedCountry = { code: j.countryCode.toUpperCase(), source: "ip-api" };
-        return _cachedCountry;
-      }
     }
   } catch (e) {}
   _cachedCountry = { code: "GH", source: "client-locale" };
