@@ -132,7 +132,15 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   );
 
-  const videosReady = () => window.dispatchEvent(new CustomEvent("sx:videos-ready"));
+  const videosReady = () => {
+    try {
+      if (getVideoCount() > 0) {
+        const r = document.getElementById("sx-retry");
+        if (r) r.remove();
+      }
+    } catch (e) {}
+    window.dispatchEvent(new CustomEvent("sx:videos-ready"));
+  };
   const load = (async () => {
     try {
       await loadVideosFromFirestore();
@@ -143,6 +151,14 @@ document.addEventListener("DOMContentLoaded", async () => {
   })();
   // Manual retry (feed button / error UI): reload pool, rebuild on success.
   window.sxRetryVideos = async () => {
+    try {
+      const r = document.getElementById("sx-retry");
+      if (r) r.remove();
+    } catch (e) {}
+    try {
+      const l = document.getElementById("sx-loader");
+      if (l) l.style.display = "flex";
+    } catch (e) {}
     try {
       await loadVideosFromFirestore();
     } catch (e) {
@@ -160,6 +176,30 @@ document.addEventListener("DOMContentLoaded", async () => {
         toast("Can't reach database — check connection or adblocker");
       } else {
         toast("Video load failed — reopen the app to retry");
+      }
+      // Empty pool: stop the infinite spinner and offer a tap-to-retry
+      // button over the player instead of a forever-loader.
+      if (/empty pool/i.test(msg)) {
+        try {
+          const l = document.getElementById("sx-loader");
+          if (l) l.style.display = "none";
+        } catch (e) {}
+        try {
+          if (!document.getElementById("sx-retry")) {
+            const host = document.getElementById("player-region");
+            if (host) {
+              const b = document.createElement("button");
+              b.id = "sx-retry";
+              b.type = "button";
+              b.textContent = "Couldn't load videos — tap to retry";
+              b.style.cssText = "position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:30;max-width:80%;padding:12px 18px;border-radius:12px;border:1px solid rgba(255,255,255,.35);background:rgba(20,20,20,.92);color:#fff;font-size:14px;font-weight:700;cursor:pointer;";
+              b.addEventListener("click", () => {
+                try { window.sxRetryVideos && window.sxRetryVideos(); } catch (e) {}
+              });
+              host.appendChild(b);
+            }
+          }
+        } catch (e) {}
       }
     } catch (e) {}
   });

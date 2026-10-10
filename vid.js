@@ -547,6 +547,7 @@ export async function loadVideosFromFirestore() {
     if (rawVideos.length === 0) {
       console.warn("No active videos found in Firestore.");
       loadSettled = true;
+      lastLoadError = new Error("empty pool: no active videos");
       // Surface instead of stranding on black: main.js toasts on this event.
       try {
         window.dispatchEvent(new CustomEvent("sx:videos-error", { detail: { message: "empty pool: no active videos" } }));
