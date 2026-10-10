@@ -44,7 +44,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 12px;
+  padding: calc(10px + env(safe-area-inset-top, 0px)) 12px 10px;
   margin-bottom: auto;
 }
 
@@ -61,6 +61,7 @@
 
 .sx-videoad-skip {
   min-width: 92px;
+  min-height: 44px;
   font-size: 13px;
   font-weight: 800;
   color: rgba(255, 255, 255, 0.75);
@@ -86,17 +87,43 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-  margin: 0 12px 14px;
+  /* Docked just above progress + bottom nav: nav (3rem + safe-area)
+   * + 22px progress strip + 12px gap. Previously 14px sat behind nav. */
+  margin: 0 12px calc(3rem + env(safe-area-inset-bottom, 0px) + 34px);
   padding: 13px 16px;
-  font-size: 15px;
+  min-height: 48px;
+  font-size: 16px;
   font-weight: 900;
   color: #fff;
   background: #ff2b55;
-  border: none;
+  border: 1px solid rgba(255, 255, 255, 0.35);
   border-radius: 12px;
   cursor: pointer;
-  box-shadow: 0 6px 24px rgba(255, 43, 85, 0.45);
+  box-shadow:
+    0 6px 24px rgba(255, 43, 85, 0.45),
+    0 2px 12px rgba(0, 0, 0, 0.6);
   animation: sx-videoad-pulse 1.6s ease-in-out infinite;
+}
+
+/* Bottom scrim so red CTA reads on any video frame. */
+.sx-videoad::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 42%;
+  z-index: 1;
+  pointer-events: none;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.65), transparent);
+}
+
+@media (min-width: 768px) {
+  .sx-videoad-cta {
+    max-width: 440px;
+    margin-left: auto;
+    margin-right: auto;
+  }
 }
 
 @keyframes sx-videoad-pulse {
@@ -131,4 +158,10 @@
   .sx-videoad-cta-dot {
     animation: none;
   }
+}
+
+.sx-videoad-skip:focus-visible,
+.sx-videoad-cta:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
 }
