@@ -13,27 +13,26 @@
     margin-top: 2px;
 }
 
-/* 3D App Icon Badge (WhatsApp Green Gradient, as in ref) */
+/* Plain Telegram glyph, no wrapper: the icon itself shows, no green badge. */
 .telegram-icon-badge {
     position: relative;
-    width: 38px;
-    height: 38px;
-    border-radius: 10px;
+    width: auto;
+    height: auto;
+    border-radius: 0;
     display: flex;
     align-items: center;
     justify-content: center;
-    background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.4);
-    /* Pulsing Scale & Glow Animation */
-    animation: waIconPulse 1.8s infinite ease-in-out;
+    background: transparent;
+    box-shadow: none;
+    animation: none;
 }
 
 .telegram-svg {
-    width: 24px;
-    height: 24px;
+    width: 36px;
+    height: 36px;
     display: block;
     object-fit: contain;
-    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.25));
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
 }
 
 /* Pulsing (Size Increment & Decrement with WhatsApp Green Glow) */
